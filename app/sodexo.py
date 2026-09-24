@@ -16,11 +16,12 @@ import httpx
 from app.halls import Hall
 
 API_URL = "https://api-prd.sodexomyway.net/v0.2/data/menu/{location_id}/{menu_id}"
-# The public key the UC Dining website itself sends with every menu request.
 HEADERS = {
+    # The public key the UC Dining website gives every visitor's browser. The API requires it.
     "Api-Key": "REMOVED-SODEXO-API-KEY",
-    "Origin": "https://ucdining.sodexomyway.com",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    # Say honestly who is asking, instead of posing as a browser on the UC Dining site
+    # (tested 2026-09-24: the API answers without an Origin header or a browser User-Agent).
+    "User-Agent": "UC-Menu-Project student app (https://github.com/Marcus-Hollimon/UC-Menu-Project)",
 }
 # Sodexo lists placeholder "dishes" such as "Have a Nice Day" with this ingredient text.
 NON_FOOD_INGREDIENTS = {"Plate Cost Peripherals"}

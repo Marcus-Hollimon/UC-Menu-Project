@@ -148,7 +148,7 @@ Two students were asked five open questions (what they ate yesterday, what they 
 | P2 | Done | `/docs` | |
 | P3 | Done: every tab clicked through in Edge (light, dark, phone width) 2026-09-24 | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
 | P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
-| P5 | Ongoing: 59 tests passing | `tests/` | |
+| P5 | Ongoing: 63 tests passing | `tests/` | |
 
 ---
 
@@ -279,7 +279,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 - **Unit:** number parsing for nutrition; turning Sodexo JSON into rows (names, diet flags, nutrition, filler dishes skipped); meal hours by hall and weekday.
 - **API:** each endpoint's success cases and its 404/409/422 cases; diet filter on `/menus` and `/menu-items`; `q` and `days` on `/menus`; nutrition fields present; the page is served at `/`.
 - **Resilience:** a failed fetch keeps old data; refreshing twice doesn't duplicate.
-- **Fixtures:** trimmed real Sodexo responses in `tests/fixtures/`, rebuilt with nutrition and diet fields.
+- **Fixtures:** trimmed real Sodexo responses in `tests/fixtures/`, keeping the real JSON shape, dish names, stations, diet flags, and nutrition numbers. Descriptions and ingredient lists were removed on 2026-09-24 (decision 8); only the marker that identifies filler "dishes" remains.
 - **Traceability:** each test module's docstring names the requirement IDs it covers.
 
 **Manual:** README run-through in a fresh clone; every tab of the page; `/docs`.
@@ -297,13 +297,18 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 | 5 | Keyword matching | **Broad** substring matching, decided 2026-09-22 (6.4). |
 | 6 | Web page technology | **Plain HTML + JS**, no build step, decided 2026-09-22. |
 | 7 | Meal hours | **Hard-coded** regular hours; breaks and holidays not handled. |
+| 8 | How the app uses Sodexo's data | **Decided** 2026-09-24, after reading UC's terms (section 10): requests name the app honestly instead of posing as the dining site, and the public repo holds no Sodexo descriptions or ingredient lists. Asking UC Dining for permission is optional. |
 
 ---
 
 ## 10. Known risks and limitations
 
-- **Unofficial data source.** The Sodexo API and key come from the UC Dining website's own requests and could change without notice.
-  - The key isn't secret: the UC Dining website sends it to every visitor's browser. But the service is Sodexo's, and calling it from another app may not be something their terms allow.
+- **Unofficial data source.** The Sodexo API and key come from the UC Dining website's own requests and could change without notice. Researched 2026-09-24 (not legal advice):
+  - **Access:** the API needs only the key, which the UC Dining website gives every visitor's browser; no login. Since *Van Buren v. United States* (2021) and *hiQ v. LinkedIn* (9th Cir. 2022), reading public, login-free data is unlikely to count as unauthorized access under the anti-hacking law (CFAA).
+  - **UC's terms** (SodexoMyWay Terms and Conditions, last updated November 2022): no rule against automated access or scraping; use must be "non-commercial and personal", which a student running their own copy fits; but no one may "copy, reproduce, distribute… its related data… without Our prior written authorization." The public repo's test files held real Sodexo menus with descriptions and ingredient lists, so those were removed (decision 8).
+  - **Copyright:** dish names, calories and times are facts, which *Feist v. Rural* (1991) says aren't copyrightable.
+  - **Honest requests:** the app used to send an `Origin` header and a browser User-Agent copied from the dining site. Testing showed the API only requires the key, so requests now name the app and link the repo.
+  - **Remaining risk:** Sodexo can change the key, block the app, or ask it to stop. If asked, stop (hiQ won on the CFAA but still ended with a $500,000 judgment on other claims after being told to stop).
   - The app keeps its traffic small: 21 requests per refresh, 4 at a time, with at most one retry each, and only when the user asks for a refresh.
 - **Menus show what's planned.** Dishes can run out or be swapped (2.1).
 - **Diet labels are Sodexo's and inconsistent** (6.3). The app never claims a dish is safe for an allergy; the page footer and the README tell people to ask dining staff.

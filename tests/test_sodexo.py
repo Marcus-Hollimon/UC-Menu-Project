@@ -1,6 +1,7 @@
 """Turning Sodexo's JSON into rows, meal hours, and loading rows into the database.
 
-Requirements: D1 (7 days of menus), D3 (nutrition and diet labels), D4 (keep old data on failure).
+Requirements: D1 (7 days of menus), D3 (nutrition and diet labels), D4 (keep old data on failure),
+and how the app uses Sodexo's data (PROJECT_SPEC.md decision 8).
 """
 import datetime as dt
 
@@ -11,8 +12,24 @@ from sqlalchemy import func, select
 from app.halls import HALLS, HallSlug
 from app.ingest import refresh_menus
 from app.models import Schedule
-from app.sodexo import clean_text, flatten_menu, parse_amount
+from app.sodexo import HEADERS, NON_FOOD_INGREDIENTS, clean_text, flatten_menu, parse_amount
 from tests.conftest import MENU_DAY, fake_fetch, load_fixture
+
+
+def test_requests_name_this_app_instead_of_posing_as_the_dining_site():
+    assert "Origin" not in HEADERS
+    assert "UC-Menu-Project" in HEADERS["User-Agent"]
+
+
+@pytest.mark.parametrize("slug", [hall.value for hall in HallSlug])
+def test_fixture_menus_keep_facts_but_not_sodexo_text(slug):
+    # The repo is public, and Sodexo's terms forbid redistributing its content.
+    # Dish names and nutrition numbers are facts; descriptions and ingredient lists are left out.
+    for meal in load_fixture(slug):
+        for group in meal["groups"]:
+            for item in group["items"]:
+                assert "description" not in item
+                assert item.get("ingredients") in {None, *NON_FOOD_INGREDIENTS}
 
 
 def test_clean_text_decodes_entities_and_collapses_spaces():

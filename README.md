@@ -2,7 +2,7 @@
 
 See what every University of Cincinnati dining hall (Center Court, MarketPointe, On The Green) is serving, filter by diet, check nutrition, and save favorite dishes to see which hall serves them, on which day, and at what time.
 
-It runs on your own computer. Menus come from the same Sodexo API the UC Dining website uses.
+It runs on your own computer. Menus come from the same Sodexo API the UC Dining website uses. The app names itself in each request and only downloads menus when you ask. UC Dining's terms allow personal, non-commercial use, so keep it that way; `PROJECT_SPEC.md` section 10 has the details.
 
 The web page has three tabs:
 - **Menus:** one meal at every hall side by side for any of the next 7 days, with diet labels (vegan, vegetarian, plant-based, mindful) and calories, carbs, protein, fat and portion size. ☆ saves a dish as a favorite.
