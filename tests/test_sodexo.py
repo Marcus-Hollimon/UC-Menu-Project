@@ -95,3 +95,19 @@ def test_refresh_keeps_going_when_one_hall_fails(db):
     assert summary.servings == 9
     assert len(summary.failed) == 1
     assert summary.failed[0].startswith("Center Court 2026-09-22")
+
+
+def test_refresh_retries_a_download_that_fails_once(db):
+    calls = []
+
+    def fetch_that_stalls_once(hall, day):
+        calls.append(hall.slug)
+        if hall.slug == HallSlug.CENTER_COURT and calls.count(hall.slug) == 1:
+            raise httpx.ReadTimeout("The read operation timed out")
+        return fake_fetch(hall, day)
+
+    summary = refresh_menus(db, start=MENU_DAY, days=1, fetch=fetch_that_stalls_once)
+
+    assert summary.failed == []
+    assert summary.servings == 16
+    assert calls.count(HallSlug.CENTER_COURT) == 2

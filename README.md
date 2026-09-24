@@ -11,37 +11,37 @@ The web page has three tabs:
 
 ## Run it
 
-You need Python 3.11 or newer and an internet connection for downloading menus.
+**1. Install Python 3.11 or newer** from https://www.python.org/downloads/. On Windows, tick **"Add python.exe to PATH"** on the installer's first screen. If typing `python` in a terminal opens the Microsoft Store, Python isn't installed yet.
 
-**Windows (PowerShell):**
+**2. Get the code.** With Git: `git clone https://github.com/Marcus-Hollimon/UC-Menu-Project.git`. Without Git: on the GitHub page, click **Code → Download ZIP** and unzip it.
+
+**3. Open a terminal in the project folder** (the one containing `README.md`) and run:
+
+Windows (PowerShell):
 
 ```
-git clone https://github.com/Marcus-Hollimon/UC-Menu-Project.git
-cd UC-Menu-Project
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python -m app.ingest
-uvicorn app.main:app
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m app.ingest
+.venv\Scripts\python.exe -m uvicorn app.main:app
 ```
 
-**macOS / Linux:**
+macOS / Linux:
 
 ```
-git clone https://github.com/Marcus-Hollimon/UC-Menu-Project.git
-cd UC-Menu-Project
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m app.ingest
-uvicorn app.main:app
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m app.ingest
+.venv/bin/python -m uvicorn app.main:app
 ```
 
-Then open http://127.0.0.1:8000. Stop the app with Ctrl+C. Next time, just activate `.venv` and run `uvicorn app.main:app`.
+**4. Open http://127.0.0.1:8000.** The app runs until you press Ctrl+C in the terminal. Next time, only the last command is needed.
 
-`python -m app.ingest` downloads the next 7 days of menus into a local SQLite file, `uc_menu.db`. Menus change daily. Use the **Refresh menus** button on the page, or run `python -m app.ingest` again, to fetch new ones. Sodexo posts menus only a few days ahead, so later days may be empty.
+The first three commands run once: create a private Python environment in `.venv`, install the libraries into it, and download the next 7 days of menus into a local SQLite file, `uc_menu.db`. Menus change daily. Use the **Refresh menus** button on the page to fetch new ones. Sodexo posts menus only a few days ahead, so later days may be empty. If the download reports failures, Sodexo was slow to answer; refresh again later.
 
-If you pull a version that changes the database tables, rebuild them with `python -m app.ingest --reset`. This also deletes your favorites.
+These commands call `.venv`'s Python directly instead of "activating" the environment, because Windows often blocks the activate script ("running scripts is disabled on this system").
+
+If you pull a version that changes the database tables, rebuild them with `.venv\Scripts\python.exe -m app.ingest --reset` (macOS/Linux: `.venv/bin/python -m app.ingest --reset`). This also deletes your favorites.
 
 ## API
 
@@ -66,10 +66,10 @@ A keyword matches a dish when every word in it appears in the dish name, ignorin
 ## Tests
 
 ```
-python -m pytest
+.venv\Scripts\python.exe -m pytest
 ```
 
-Tests use an in-memory database and saved menus in `tests/fixtures/`, so they don't need the internet.
+(macOS/Linux: `.venv/bin/python -m pytest`.) Tests use an in-memory database and saved menus in `tests/fixtures/`, so they don't need the internet.
 
 ## Project layout
 

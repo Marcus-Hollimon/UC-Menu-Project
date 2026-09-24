@@ -20,6 +20,8 @@ from app.models import Location, MenuItem, Schedule
 FetchMenu = Callable[[Hall, dt.date], list[dict]]
 # Downloads at once. Each takes ~1.7 s, so 21 of them one by one took ~35 s. Kept small to go easy on Sodexo.
 PARALLEL_DOWNLOADS = 4
+# Sodexo sometimes stalls past the timeout on one request, then answers the next try in under a second.
+ATTEMPTS_PER_DOWNLOAD = 2
 # MenuRow fields copied onto the MenuItem row each time a dish is seen
 DISH_FIELDS = (
     "description", "is_vegan", "is_vegetarian", "is_plant_based", "is_mindful",
@@ -67,12 +69,14 @@ def refresh_menus(
     jobs = [(hall, start + dt.timedelta(days=offset)) for hall in HALLS.values() for offset in range(days)]
 
     def download(job: tuple[Hall, dt.date]) -> list[sodexo.MenuRow] | str:
-        """Rows for one hall on one day, or an error message if the download failed."""
+        """Rows for one hall on one day, or an error message if every attempt failed."""
         hall, day = job
-        try:
-            return sodexo.flatten_menu(fetch(hall, day))
-        except (httpx.HTTPError, ValueError) as error:
-            return f"{hall.name} {day}: {error}"
+        for _ in range(ATTEMPTS_PER_DOWNLOAD):
+            try:
+                return sodexo.flatten_menu(fetch(hall, day))
+            except (httpx.HTTPError, ValueError) as error:
+                last_error = error
+        return f"{hall.name} {day}: {last_error}"
 
     # Only the downloads run in parallel; all database writes happen below, one at a time.
     with ThreadPoolExecutor(max_workers=PARALLEL_DOWNLOADS) as pool:

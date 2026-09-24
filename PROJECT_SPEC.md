@@ -92,7 +92,8 @@ Two students were asked five open questions (what they ate yesterday, what they 
 - Allergens are not stored or filtered (6.3).
 
 **D4.** Application must keep serving the last successfully retrieved menu data if the source is unavailable.
-- If fetching one hall-day fails, the stored rows for that hall-day stay as they were. The refresh reports which fetches failed.
+- A failed download is retried once. Sodexo sometimes stalls past the 20-second timeout on one request and answers the next in under a second.
+- If both tries fail, the stored rows for that hall-day stay as they were. The refresh reports which fetches failed.
 - The app starts and serves stored menus with no network access.
 
 **D5.** Application must cover every UC Dining location that publishes a menu.
@@ -140,14 +141,14 @@ Two students were asked five open questions (what they ate yesterday, what they 
 | D1 | Done (limited by how far ahead Sodexo publishes) | `ingest.py` | `test_refresh_*` |
 | D2 | Partial: broad matching done; punctuation and plurals in backlog | `models.matches_keyword` | `test_calendar_keyword_matches_all_words_in_any_order`, `test_search_treats_wildcard_characters_literally` |
 | D3 | Done | `sodexo.py`, `models.MenuItem` | `test_parse_amount_*`, `test_flatten_menu_reads_diet_labels_and_nutrition`, `test_search_results_include_nutrition` |
-| D4 | Done | `ingest.refresh_menus` | `test_refresh_keeps_going_when_one_hall_fails` |
+| D4 | Done | `ingest.refresh_menus` | `test_refresh_keeps_going_when_one_hall_fails`, `test_refresh_retries_a_download_that_fails_once` |
 | D5 | Done: survey recorded above | `halls.py` | manual check |
 | C1–C3 | Dropped 2026-09-24 | | |
 | P1 | Done | `models.py`, `database.py` | |
 | P2 | Done | `/docs` | |
 | P3 | Done: every tab clicked through in Edge (light, dark, phone width) 2026-09-24 | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
-| P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); instructor confirming it counts | `README.md` | |
-| P5 | Ongoing: 52 tests passing | `tests/` | |
+| P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
+| P5 | Ongoing: 53 tests passing | `tests/` | |
 
 ---
 
@@ -250,6 +251,10 @@ Done when: someone following only the README can open the page, see tonight's di
 ### Phase 2: Testing milestone (by Wed 2026-10-01)
 - Automated tests for every N and D requirement (section 8).
 - Manual: follow the README in a fresh clone; click through every tab; a pass through `/docs`.
+  - Fresh clone, 2026-09-24, Windows, Python 3.11: install, menu download, and all tests worked. Three problems found and fixed:
+    1. `python` opens a Microsoft Store stub on a PC without Python. The README now says where to get Python.
+    2. The Windows `activate` script is often blocked by PowerShell. The README now calls `.venv`'s Python directly.
+    3. 8 of 21 menu downloads timed out while Sodexo was slow. Downloads are now retried once (D4).
 - If possible, a short walkthrough of the page with an interview participant, noting confusion.
 - Write up results, including failures.
 
