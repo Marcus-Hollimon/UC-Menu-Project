@@ -40,7 +40,8 @@ def db():
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
     # Not `with TestClient(app)`: that would run the app's startup against the real uc_menu.db.
-    yield TestClient(app)
+    # base_url: the app only answers requests addressed to 127.0.0.1 or localhost.
+    yield TestClient(app, base_url="http://127.0.0.1")
     app.dependency_overrides.clear()
 
 

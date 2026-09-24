@@ -308,7 +308,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 - **Diet labels are Sodexo's and inconsistent** (6.3). The app never claims a dish is safe for an allergy; the page footer and the README tell people to ask dining staff.
 - **Security (reviewed 2026-09-24).** Low risk while the app runs only on the user's own computer and stores only menus and favorites.
   - Checked and passing: no password or `.env` in the git history; dish names are inserted into the page as text, not HTML; every database query is parameterized; no known vulnerabilities in the 28 installed libraries (pip-audit); the server listens only on 127.0.0.1; a forged cross-site "add favorite" request is rejected.
-  - Not blocked: a request that names another website as its host (DNS rebinding). The data at stake is a favorites list; a one-line host check would close it.
+  - Added the same day: the app refuses any request not addressed to `127.0.0.1` or `localhost` (`TrustedHostMiddleware` in `app/main.py`). This blocks DNS rebinding, and also requests over the local network if someone starts it with `--host 0.0.0.0`. Tested in `tests/test_security.py`.
   - Open item: reset the Neon password (it was shared in a chat log).
 - **Short menu horizon.** Sodexo publishes some halls only a few days ahead, so the end of the 7-day window can be empty.
 - **Hard-coded hours.** Breaks and holidays show regular hours.
