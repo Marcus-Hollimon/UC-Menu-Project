@@ -1,0 +1,155 @@
+[
+  {
+    "name": "Lunch",
+    "groups": [
+      {
+        "name": "Savory",
+        "items": [
+          {
+            "course": "Savory",
+            "meal": "Lunch",
+            "formalName": "Mexican  Brown Rice",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "49",
+            "carbohydrates": "9g",
+            "protein": "1g",
+            "fat": "1",
+            "portion": "1/4 CUP"
+          }
+        ]
+      },
+      {
+        "name": "Slices",
+        "items": [
+          {
+            "course": "Slices",
+            "meal": "Lunch",
+            "formalName": "Roasted Vegetable Pizza",
+            "isVegan": false,
+            "isVegetarian": true,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "258",
+            "carbohydrates": "33g",
+            "protein": "11g",
+            "fat": "10",
+            "portion": "SLC=1/8"
+          },
+          {
+            "course": "Slices",
+            "meal": "Lunch",
+            "formalName": "Pepperoni Pizza",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "243",
+            "carbohydrates": "28g",
+            "protein": "11g",
+            "fat": "10",
+            "portion": "SLC=1/8"
+          },
+          {
+            "course": "Slices",
+            "meal": "Lunch",
+            "formalName": "Cheese Pizza",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "219",
+            "carbohydrates": "28g",
+            "protein": "10g",
+            "fat": "7",
+            "portion": "SLC=1/8"
+          }
+        ]
+      },
+      {
+        "name": "Spoonful",
+        "items": [
+          {
+            "course": "Spoonful",
+            "meal": "Lunch",
+            "formalName": "Have a Nice Day",
+            "ingredients": "Plate Cost Peripherals",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "",
+            "carbohydrates": "0",
+            "protein": "",
+            "fat": "0",
+            "portion": "EA"
+          }
+        ]
+      },
+      {
+        "name": "Twists",
+        "items": [
+          {
+            "course": "Twists",
+            "meal": "Lunch",
+            "formalName": "Roasted General Tso Cauliflower",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "228",
+            "carbohydrates": "36g",
+            "protein": "4g",
+            "fat": "9",
+            "portion": "ENTREE"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Dinner",
+    "groups": [
+      {
+        "name": "Slices",
+        "items": [
+          {
+            "course": "Slices",
+            "meal": "Dinner",
+            "formalName": "Cheese Pizza",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "219",
+            "carbohydrates": "28g",
+            "protein": "10g",
+            "fat": "7",
+            "portion": "SLC=1/8"
+          }
+        ]
+      },
+      {
+        "name": "Twists",
+        "items": [
+          {
+            "course": "Twists",
+            "meal": "Dinner",
+            "formalName": "Roasted General Tso Cauliflower",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "228",
+            "carbohydrates": "36g",
+            "protein": "4g",
+            "fat": "9",
+            "portion": "ENTREE"
+          }
+        ]
+      }
+    ]
+  }
+]

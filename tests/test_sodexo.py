@@ -1,0 +1,97 @@
+"""Turning Sodexo's JSON into rows, meal hours, and loading rows into the database.
+
+Requirements: D1 (7 days of menus), D3 (nutrition and diet labels), D4 (keep old data on failure).
+"""
+import datetime as dt
+
+import httpx
+import pytest
+from sqlalchemy import func, select
+
+from app.halls import HALLS, HallSlug
+from app.ingest import refresh_menus
+from app.models import Schedule
+from app.sodexo import clean_text, flatten_menu, parse_amount
+from tests.conftest import MENU_DAY, fake_fetch, load_fixture
+
+
+def test_clean_text_decodes_entities_and_collapses_spaces():
+    assert clean_text("  Mac &amp; Cheese ") == "Mac & Cheese"
+    assert clean_text("Mexican  Brown Rice") == "Mexican Brown Rice"
+    assert clean_text(None) == ""
+
+
+def test_flatten_menu_gives_one_row_per_dish():
+    rows = flatten_menu(load_fixture("center-court"))
+
+    assert len(rows) == 7
+    pizza = next(r for r in rows if r.name == "Roasted Vegetable Pizza")
+    assert (pizza.meal, pizza.station, pizza.is_vegetarian) == ("Lunch", "Slices", True)
+
+
+def test_flatten_menu_cleans_names_and_skips_filler():
+    names = {row.name for row in flatten_menu(load_fixture("center-court"))}
+
+    assert "Mexican Brown Rice" in names
+    assert "Have a Nice Day" not in names
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("264", 264),
+    ("35g", 35),
+    ("523mg", 523),
+    ("2.6g", 3),
+    (0, 0),
+    ("", None),
+    (None, None),
+    ("n/a", None),
+])
+def test_parse_amount_keeps_the_leading_number(value, expected):
+    assert parse_amount(value) == expected
+
+
+def test_flatten_menu_reads_diet_labels_and_nutrition():
+    rows = flatten_menu(load_fixture("marketpointe"))
+
+    beans = next(r for r in rows if r.name == "Sofrito Black Beans")
+    assert (beans.is_vegan, beans.is_vegetarian, beans.is_plant_based, beans.is_mindful) == (True, True, True, True)
+    assert (beans.calories, beans.carbs_g, beans.protein_g, beans.fat_g, beans.portion) == (45, 6, 2, 2, "1/4 CUP")
+
+
+def test_hours_depend_on_hall_and_day_of_week():
+    tuesday, saturday = dt.date(2026, 9, 22), dt.date(2026, 9, 26)
+    center_court = HALLS[HallSlug.CENTER_COURT]
+    marketpointe = HALLS[HallSlug.MARKETPOINTE]
+
+    assert center_court.hours_for(tuesday, "Lunch") == (dt.time(10, 30), dt.time(16, 30))
+    assert center_court.hours_for(saturday, "Lunch") is None  # closed weekends
+    assert marketpointe.hours_for(saturday, "Brunch") == (dt.time(9), dt.time(16, 30))
+
+
+def test_refresh_stores_servings_with_times(db):
+    summary = refresh_menus(db, start=MENU_DAY, days=1, fetch=fake_fetch)
+
+    assert summary.servings == 16
+    assert summary.failed == []
+    breakfast = db.scalars(select(Schedule).where(Schedule.meal == "Breakfast")).first()
+    assert (breakfast.start_time, breakfast.end_time) == (dt.time(7), dt.time(10, 30))
+
+
+def test_refreshing_twice_does_not_duplicate(db):
+    refresh_menus(db, start=MENU_DAY, days=1, fetch=fake_fetch)
+    refresh_menus(db, start=MENU_DAY, days=1, fetch=fake_fetch)
+
+    assert db.scalar(select(func.count()).select_from(Schedule)) == 16
+
+
+def test_refresh_keeps_going_when_one_hall_fails(db):
+    def flaky_fetch(hall, day):
+        if hall.slug == HallSlug.CENTER_COURT:
+            raise httpx.ConnectError("offline")
+        return fake_fetch(hall, day)
+
+    summary = refresh_menus(db, start=MENU_DAY, days=1, fetch=flaky_fetch)
+
+    assert summary.servings == 9
+    assert len(summary.failed) == 1
+    assert summary.failed[0].startswith("Center Court 2026-09-22")

@@ -1,0 +1,112 @@
+[
+  {
+    "name": "Breakfast",
+    "groups": [
+      {
+        "name": "Good Vibes",
+        "items": [
+          {
+            "course": "Good Vibes",
+            "meal": "Breakfast",
+            "formalName": "Low Fat Strawberry Yogurt",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "18",
+            "carbohydrates": "1g",
+            "protein": "1g",
+            "fat": "1",
+            "portion": "OZ"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Lunch",
+    "groups": [
+      {
+        "name": "Ciao",
+        "items": [
+          {
+            "course": "Ciao",
+            "meal": "Lunch",
+            "formalName": "Pepperoni Pizza",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "243",
+            "carbohydrates": "28g",
+            "protein": "11g",
+            "fat": "10",
+            "portion": "SLC=1/8"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Dinner",
+    "groups": [
+      {
+        "name": "Ciao",
+        "items": [
+          {
+            "course": "Ciao",
+            "meal": "Dinner",
+            "formalName": "Cheese Pizza",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "219",
+            "carbohydrates": "28g",
+            "protein": "10g",
+            "fat": "7",
+            "portion": "SLC=1/8"
+          }
+        ]
+      },
+      {
+        "name": "Ucook",
+        "items": [
+          {
+            "course": "Ucook",
+            "meal": "Dinner",
+            "formalName": "Salmon, Barley and Lentil Salad",
+            "isVegan": false,
+            "isVegetarian": false,
+            "isPlantBased": false,
+            "isMindful": false,
+            "calories": "422",
+            "carbohydrates": "36g",
+            "protein": "31g",
+            "fat": "18",
+            "portion": "ENTREE SALAD"
+          }
+        ]
+      },
+      {
+        "name": "Y'Mas",
+        "items": [
+          {
+            "course": "Y'Mas",
+            "meal": "Dinner",
+            "formalName": "Sofrito Black Beans",
+            "isVegan": true,
+            "isVegetarian": true,
+            "isPlantBased": true,
+            "isMindful": true,
+            "calories": "45",
+            "carbohydrates": "6g",
+            "protein": "2g",
+            "fat": "2",
+            "portion": "1/4 CUP"
+          }
+        ]
+      }
+    ]
+  }
+]

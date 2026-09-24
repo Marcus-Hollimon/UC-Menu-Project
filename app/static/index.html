@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC Dining Favorites</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e00122'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f6f4;
+    --card: #ffffff;
+    --text: #1c1c1c;
+    --muted: #666666;
+    --line: #e2e2dd;
+    --accent: #e00122; /* UC red */
+    --accent-text: #ffffff;
+    --diet: #1f7a3a;
+    --diet-soft: #e3f4e7;
+    --mindful: #245f9e;
+    --mindful-soft: #e4eefa;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151515;
+      --card: #1f1f1f;
+      --text: #ececec;
+      --muted: #a3a3a3;
+      --line: #343434;
+      --accent: #ff6070;
+      --accent-text: #1a0004;
+      --diet: #86d99b;
+      --diet-soft: #1d3324;
+      --mindful: #93c0f2;
+      --mindful-soft: #1c2a3b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 18px 0 6px; }
+  h1 { margin: 0; font-size: 1.45rem; }
+  h1 span { color: var(--accent); }
+  h2 { margin: 22px 0 10px; font-size: 1.05rem; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+
+  button { font: inherit; cursor: pointer; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .6; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button.danger { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .tabs { display: flex; gap: 4px; margin: 8px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tabs button { padding: 10px 14px; border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chips button { padding: 5px 12px; border-radius: 999px; }
+  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  label.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: .85rem; }
+  select, input[type="text"], input[type="search"] {
+    min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); color: var(--text); font: inherit;
+  }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); align-items: start; }
+  .card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
+  .card > header { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .card h3 { margin: 0; font-size: 1.1rem; }
+  .stack > * + * { margin-top: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  .empty { margin: 8px 0; color: var(--muted); }
+  .notice { padding: 16px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); }
+
+  details.station { padding: 6px 0; border-top: 1px solid var(--line); }
+  details.station summary { cursor: pointer; padding: 2px 0; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+  ul.dishes { margin: 4px 0 0; padding: 0; list-style: none; }
+  .dish { padding: 5px 0; }
+  .dish-line { display: flex; gap: 6px; align-items: flex-start; }
+  .dish-name { flex: 1; font-weight: 600; }
+  .facts { color: var(--muted); font-size: .82rem; }
+  .badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--diet-soft); color: var(--diet); font-size: .72rem; font-weight: 600; vertical-align: 1px; }
+  .badge.mindful { background: var(--mindful-soft); color: var(--mindful); }
+  .star { padding: 0 2px; border: none; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; }
+  .star[aria-pressed="true"] { color: var(--accent); cursor: default; }
+
+  form.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
+  form.row .grow { flex: 1 1 220px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 12px; }
+  .checks label { display: flex; gap: 4px; align-items: center; font-size: .9rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  ul.when { margin: 6px 0 0; padding-left: 18px; font-size: .9rem; }
+
+  .fav { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  .fav .actions { flex-shrink: 0; }
+  .slot { padding: 7px 0; border-top: 1px solid var(--line); }
+  .slot:first-of-type { border-top: none; }
+
+  footer { padding: 28px 0 36px; color: var(--muted); font-size: .82rem; }
+  #toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 10px;
+    background: var(--text); color: var(--bg); box-shadow: 0 4px 16px rgb(0 0 0 / .2);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { background: var(--accent); color: var(--accent-text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>UC Dining <span>Favorites</span></h1>
+      <p class="sub">What's on at Center Court, MarketPointe and On The Green, and when your favorites are served.</p>
+    </div>
+    <button id="refresh" type="button">Refresh menus</button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" data-tab="menus" aria-selected="true">Menus</button>
+    <button type="button" role="tab" data-tab="find" aria-selected="false">Find a dish</button>
+    <button type="button" role="tab" data-tab="favorites" aria-selected="false">My favorites</button>
+  </nav>
+
+  <main>
+    <!-- Menus: one meal at every hall, side by side (N5, Need 2) -->
+    <section id="tab-menus">
+      <div class="chips" id="days" role="group" aria-label="Day"></div>
+      <div class="chips" id="meals" role="group" aria-label="Meal"></div>
+      <div class="filters">
+        <label class="field">Hall <select id="hall"></select></label>
+        <label class="field">Diet <select id="diet"></select></label>
+      </div>
+      <div class="grid" id="menu-grid"></div>
+    </section>
+
+    <!-- Find a dish: preview what a keyword matches, then save it (N1) -->
+    <section id="tab-find" hidden>
+      <form id="find-form" class="row">
+        <label class="field grow">Dish or keyword
+          <input type="search" id="q" placeholder="e.g. pancake, tofu, general tso" minlength="2" maxlength="100" required>
+        </label>
+        <label class="field">Diet <select id="find-diet"></select></label>
+        <button class="primary" type="submit">Search next 7 days</button>
+      </form>
+      <form id="save-form" class="card stack" hidden>
+        <div>
+          <strong>Save "<span id="save-keyword"></span>" as a favorite</strong>
+          <div class="muted small">It will match every dish whose name contains these words. Leave every hall unchecked to watch all of them.</div>
+        </div>
+        <div class="checks" id="save-halls"></div>
+        <label class="field">Notes (optional) <input type="text" id="save-notes" maxlength="500"></label>
+        <div><button class="primary" type="submit">Save favorite</button></div>
+      </form>
+      <h2 id="results-heading" hidden>This week</h2>
+      <div id="find-results"></div>
+    </section>
+
+    <!-- My favorites: list, edit, delete, and this week's matches (N2-N4) -->
+    <section id="tab-favorites" hidden>
+      <div id="fav-list" class="stack"></div>
+      <h2 id="week-heading">This week</h2>
+      <div id="week" class="stack"></div>
+    </section>
+  </main>
+
+  <footer>
+    Menus, nutrition and diet labels come from Sodexo and show what's planned. Dishes can run out or change, and labels
+    are sometimes missing, so don't rely on this for allergies; ask dining staff. Nutrition is per portion. Times are
+    each hall's regular hours; breaks and holidays aren't included.
+  </footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+const $ = (selector) => document.querySelector(selector);
+
+const DIETS = [
+  ["", "Any diet"],
+  ["vegetarian", "Vegetarian"],
+  ["vegan", "Vegan"],
+  ["plant-based", "Plant-based"],
+  ["mindful", "Mindful"],
+];
+
+const state = {
+  halls: [],      // [{slug, name}] from /locations
+  favorites: [],  // from /favorites
+  day: null,      // "YYYY-MM-DD" shown on the Menus tab
+  meal: null,     // meal name shown on the Menus tab
+  servings: [],   // everything served on `day`, every hall and meal
+  search: null,   // {q, diet, servings}: the last "Find a dish" search
+};
+
+// ---------- helpers ----------
+
+// Build an element. Children are added as text or elements, never parsed as HTML,
+// so dish names from Sodexo can't inject markup.
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value === false || value == null) continue;
+    if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
+    else if (key === "class") el.className = value;
+    else el.setAttribute(key, value === true ? "" : value);
+  }
+  el.append(...children.flat(Infinity).filter((child) => child != null && child !== false));
+  return el;
+}
+
+// Call the JSON API. Throws an Error carrying the API's message on failure.
+async function api(path, options = {}) {
+  const init = Object.assign({}, options);
+  if (options.body) init.headers = { "Content-Type": "application/json" };
+  const response = await fetch(path, init);
+  if (response.status === 204) return null;
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = body && body.detail;
+    if (typeof detail === "string") throw new Error(detail);
+    if (Array.isArray(detail)) throw new Error(detail.map((problem) => problem.msg).join("; "));
+    throw new Error(`Request failed (${response.status})`);
+  }
+  return body;
+}
+
+let toastTimer;
+function toast(message, isError = false) {
+  const el = $("#toast");
+  el.textContent = message;
+  el.classList.toggle("error", isError);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 4000);
+}
+
+// Browser storage can be blocked; the page works without it.
+function remember(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) { /* ignore */ }
+}
+function recall(key) {
+  try { return localStorage.getItem(key); } catch (error) { return null; }
+}
+
+const pad = (n) => String(n).padStart(2, "0");
+const isoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const todayIso = () => isoDate(new Date());
+function parseIso(iso) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+function addDays(date, count) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + count);
+  return copy;
+}
+
+// "Today", "Tomorrow", or e.g. "Sat, 9/26"
+function dayLabel(iso) {
+  const offset = Math.round((parseIso(iso) - parseIso(todayIso())) / 86400000);
+  if (offset === 0) return "Today";
+  if (offset === 1) return "Tomorrow";
+  return parseIso(iso).toLocaleDateString(undefined, { weekday: "short", month: "numeric", day: "numeric" });
+}
+function longDayLabel(iso) {
+  const label = parseIso(iso).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const relative = dayLabel(iso);
+  return relative === "Today" || relative === "Tomorrow" ? `${relative} · ${label}` : label;
+}
+
+// "16:30:00" -> "4:30 PM"
+function timeLabel(hhmmss) {
+  const [hour, minute] = hhmmss.split(":").map(Number);
+  return `${hour % 12 || 12}:${pad(minute)} ${hour < 12 ? "AM" : "PM"}`;
+}
+const hoursLabel = (start, end) => (start && end ? `${timeLabel(start)}–${timeLabel(end)}` : "");
+function nowTime() {
+  const now = new Date();
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
+}
+
+function factsLine(dish) {
+  const parts = [];
+  if (dish.calories != null) parts.push(`${dish.calories} cal`);
+  if (dish.carbs_g != null) parts.push(`${dish.carbs_g} g carbs`);
+  if (dish.protein_g != null) parts.push(`${dish.protein_g} g protein`);
+  if (dish.fat_g != null) parts.push(`${dish.fat_g} g fat`);
+  if (dish.portion) parts.push(`portion: ${dish.portion}`);
+  return parts.join(" · ");
+}
+
+// Vegan dishes are also labeled vegetarian and plant-based, so show only the most specific label.
+function dietBadges(diets) {
+  const main = ["vegan", "plant-based", "vegetarian"].find((diet) => diets.includes(diet));
+  return [main, diets.includes("mindful") && "mindful"]
+    .filter(Boolean)
+    .map((diet) => h("span", { class: `badge ${diet}` }, diet));
+}
+
+const isFavorite = (name) => state.favorites.some((fav) => fav.keyword.toLowerCase() === name.toLowerCase());
+
+function starButton(dishName) {
+  const saved = isFavorite(dishName);
+  return h("button", {
+    type: "button",
+    class: "star",
+    "aria-pressed": String(saved),
+    title: saved ? "Already a favorite" : "Save as a favorite",
+    "aria-label": saved ? `${dishName} is a favorite` : `Save ${dishName} as a favorite`,
+    onclick: saved ? null : () => addFavorite({ keyword: dishName, halls: [], notes: "" }),
+  }, saved ? "★" : "☆");
+}
+
+function dishItem(dish) {
+  return h("li", { class: "dish" },
+    h("div", { class: "dish-line" },
+      h("span", { class: "dish-name" }, dish.dish, dietBadges(dish.diets)),
+      starButton(dish.dish)),
+    h("div", { class: "facts" }, factsLine(dish)));
+}
+
+function hallCheckboxes(selected = []) {
+  return state.halls.map((hall) =>
+    h("label", {},
+      h("input", { type: "checkbox", value: hall.slug, checked: selected.includes(hall.slug) }),
+      hall.name));
+}
+const checkedHalls = (container) => [...container.querySelectorAll("input:checked")].map((input) => input.value);
+
+function hallNames(slugs) {
+  if (!slugs.length) return "All halls";
+  return slugs.map((slug) => (state.halls.find((hall) => hall.slug === slug) || { name: slug }).name).join(", ");
+}
+
+function groupBy(items, keyOf) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return groups;
+}
+
+async function addFavorite(favorite) {
+  try {
+    const saved = await api("/favorites", { method: "POST", body: JSON.stringify(favorite) });
+    state.favorites.push(saved);
+    toast(`Saved "${saved.keyword}". See when it's served under My favorites.`);
+    renderMenu();
+    if (state.search) renderResults();
+    return true;
+  } catch (error) {
+    toast(error.message, true);
+    return false;
+  }
+}
+
+// ---------- Menus tab ----------
+
+function renderDays() {
+  const chips = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const iso = isoDate(addDays(new Date(), offset));
+    chips.push(h("button", { type: "button", "aria-pressed": String(iso === state.day), onclick: () => selectDay(iso) },
+      dayLabel(iso)));
+  }
+  $("#days").replaceChildren(...chips);
+}
+
+async function selectDay(iso) {
+  state.day = iso;
+  renderDays();
+  $("#menu-grid").replaceChildren(h("p", { class: "empty" }, "Loading…"));
+  try {
+    state.servings = await api(`/menus?day=${iso}`);
+  } catch (error) {
+    state.servings = [];
+    toast(error.message, true);
+  }
+  const meals = mealsOf(state.servings);
+  if (!meals.some((meal) => meal.name === state.meal)) state.meal = defaultMeal(meals);
+  renderMeals(meals);
+  renderMenu();
+}
+
+// The meals served that day, earliest first, with the widest hours across halls.
+function mealsOf(servings) {
+  const meals = new Map();
+  for (const s of servings) {
+    const meal = meals.get(s.meal) || { name: s.meal, start: s.start_time, end: s.end_time };
+    if (s.start_time && (!meal.start || s.start_time < meal.start)) meal.start = s.start_time;
+    if (s.end_time && (!meal.end || s.end_time > meal.end)) meal.end = s.end_time;
+    meals.set(s.meal, meal);
+  }
+  return [...meals.values()].sort((a, b) => (a.start || "99").localeCompare(b.start || "99"));
+}
+
+// Today: the meal being served now, or the next one. Other days: the first meal.
+function defaultMeal(meals) {
+  if (!meals.length) return null;
+  if (state.day !== todayIso()) return meals[0].name;
+  const now = nowTime();
+  return (meals.find((meal) => meal.end && now < meal.end) || meals[meals.length - 1]).name;
+}
+
+function renderMeals(meals) {
+  $("#meals").replaceChildren(...meals.map((meal) =>
+    h("button", {
+      type: "button",
+      "aria-pressed": String(meal.name === state.meal),
+      onclick: () => { state.meal = meal.name; renderMeals(meals); renderMenu(); },
+    }, meal.name)));
+}
+
+function renderMenu() {
+  const grid = $("#menu-grid");
+  if (!state.servings.length) {
+    grid.replaceChildren(h("div", { class: "notice" },
+      "No menus stored for this day. Sodexo posts menus only a few days ahead; for today or tomorrow, click ",
+      h("strong", {}, "Refresh menus"), " to download them."));
+    return;
+  }
+  const onlyHall = $("#hall").value;
+  const halls = state.halls.filter((hall) => !onlyHall || hall.slug === onlyHall);
+  grid.replaceChildren(...halls.map((hall) => hallCard(hall, $("#diet").value)));
+}
+
+function hallCard(hall, diet) {
+  const atMeal = state.servings.filter((s) => s.hall_slug === hall.slug && s.meal === state.meal);
+  const shown = diet ? atMeal.filter((s) => s.diets.includes(diet)) : atMeal;
+  let body;
+  if (!atMeal.length) {
+    body = h("p", { class: "empty" }, `No ${state.meal.toLowerCase()} menu posted. The hall may be closed.`);
+  } else if (!shown.length) {
+    body = h("p", { class: "empty" }, `Nothing labeled ${diet} this meal.`);
+  } else {
+    body = [...groupBy(shown, (s) => s.station)].map(([station, dishes]) =>
+      h("details", { class: "station", open: true },
+        h("summary", {}, `${station} (${dishes.length})`),
+        h("ul", { class: "dishes" }, dishes.map(dishItem))));
+  }
+  const hours = atMeal.length ? hoursLabel(atMeal[0].start_time, atMeal[0].end_time) : "";
+  return h("article", { class: "card" },
+    h("header", {}, h("h3", {}, hall.name), h("span", { class: "muted small" }, hours)),
+    body);
+}
+
+// ---------- Find a dish tab ----------
+
+async function search(event) {
+  event.preventDefault();
+  const q = $("#q").value.trim().replace(/\s+/g, " ");
+  const diet = $("#find-diet").value;
+  if (q.length < 2) {
+    toast("Type at least 2 letters.", true);
+    return;
+  }
+  const params = new URLSearchParams({ q, days: "7" });
+  if (diet) params.set("diet", diet);
+  $("#find-results").replaceChildren(h("p", { class: "empty" }, "Searching…"));
+  try {
+    state.search = { q, diet, servings: await api(`/menus?${params}`) };
+  } catch (error) {
+    toast(error.message, true);
+    $("#find-results").replaceChildren();
+    return;
+  }
+  $("#save-keyword").textContent = q;
+  $("#save-form").hidden = false;
+  renderResults();
+}
+
+function renderResults() {
+  const { q, diet, servings } = state.search;
+  const heading = $("#results-heading");
+  heading.hidden = false;
+  if (!servings.length) {
+    heading.textContent = "Nothing this week";
+    $("#find-results").replaceChildren(h("div", { class: "notice" },
+      `Nothing matching "${q}"${diet ? ` labeled ${diet}` : ""} in the next 7 days. `,
+      "Menus are posted only a few days ahead, so save it as a favorite and check back."));
+    return;
+  }
+  const dishes = groupBy(servings, (s) => s.dish);
+  heading.textContent = `${dishes.size} ${dishes.size === 1 ? "dish" : "dishes"} matching "${q}", ` +
+    `served ${servings.length} ${servings.length === 1 ? "time" : "times"} in the next 7 days`;
+  $("#find-results").replaceChildren(h("div", { class: "grid" }, [...dishes].map(([name, list]) =>
+    h("article", { class: "card" },
+      h("div", { class: "dish-line" },
+        h("span", { class: "dish-name" }, name, dietBadges(list[0].diets)),
+        starButton(name)),
+      h("div", { class: "facts" }, factsLine(list[0])),
+      h("ul", { class: "when" }, list.map((s) =>
+        h("li", {}, `${dayLabel(s.date)} · ${s.meal} ${hoursLabel(s.start_time, s.end_time)} · ${s.hall}`)))))));
+}
+
+async function saveSearch(event) {
+  event.preventDefault();
+  const saved = await addFavorite({
+    keyword: state.search.q,
+    halls: checkedHalls($("#save-halls")),
+    notes: $("#save-notes").value.trim(),
+  });
+  if (saved) $("#save-notes").value = "";
+}
+
+// ---------- My favorites tab ----------
+
+async function loadFavorites() {
+  try {
+    const [favorites, entries] = await Promise.all([api("/favorites"), api("/favorites/calendar?days=7")]);
+    state.favorites = favorites;
+    renderFavorites(entries);
+    renderWeek(entries);
+  } catch (error) {
+    toast(error.message, true);
+  }
+}
+
+function renderFavorites(entries) {
+  if (!state.favorites.length) {
+    $("#fav-list").replaceChildren(h("div", { class: "notice" },
+      "No favorites yet. Tap ☆ next to a dish on the Menus tab, or search on Find a dish."));
+    return;
+  }
+  $("#fav-list").replaceChildren(...state.favorites.map((fav) =>
+    favoriteRow(fav, entries.filter((entry) => entry.favorite_id === fav.id).length)));
+}
+
+function favoriteRow(fav, count) {
+  const row = h("article", { class: "card fav" },
+    h("div", {},
+      h("strong", {}, fav.keyword), " ",
+      h("span", { class: "muted small" },
+        `${hallNames(fav.halls)} · ${count ? `served ${count} ${count === 1 ? "time" : "times"} this week` : "not on this week's menus"}`),
+      fav.notes ? h("div", { class: "small" }, fav.notes) : null),
+    h("div", { class: "actions" },
+      h("button", { type: "button", onclick: () => row.replaceWith(editForm(fav, count)) }, "Edit"),
+      h("button", { type: "button", class: "danger", onclick: () => removeFavorite(fav) }, "Delete")));
+  return row;
+}
+
+function editForm(fav, count) {
+  const keyword = h("input", { type: "text", value: fav.keyword, minlength: "2", maxlength: "100", required: true });
+  const notes = h("input", { type: "text", value: fav.notes, maxlength: "500" });
+  const halls = h("div", { class: "checks" }, hallCheckboxes(fav.halls));
+  const form = h("form", {
+    class: "card stack",
+    onsubmit: async (event) => {
+      event.preventDefault();
+      try {
+        await api(`/favorites/${fav.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ keyword: keyword.value, halls: checkedHalls(halls), notes: notes.value.trim() }),
+        });
+        toast("Favorite updated.");
+        await loadFavorites();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    },
+  },
+    h("label", { class: "field" }, "Keyword", keyword),
+    h("div", {}, h("div", { class: "muted small" }, "Halls (leave all unchecked for every hall)"), halls),
+    h("label", { class: "field" }, "Notes", notes),
+    h("div", { class: "actions" },
+      h("button", { type: "submit", class: "primary" }, "Save"),
+      h("button", { type: "button", onclick: () => form.replaceWith(favoriteRow(fav, count)) }, "Cancel")));
+  return form;
+}
+
+async function removeFavorite(fav) {
+  if (!confirm(`Delete the favorite "${fav.keyword}"?`)) return;
+  try {
+    await api(`/favorites/${fav.id}`, { method: "DELETE" });
+    toast(`Deleted "${fav.keyword}".`);
+    await loadFavorites();
+  } catch (error) {
+    toast(error.message, true);
+  }
+}
+
+// This week's matches, grouped by day, then by meal and hall.
+function renderWeek(entries) {
+  $("#week-heading").hidden = !state.favorites.length;
+  if (!state.favorites.length) {
+    $("#week").replaceChildren();
+    return;
+  }
+  if (!entries.length) {
+    $("#week").replaceChildren(h("div", { class: "notice" },
+      "None of your favorites are on the menus stored for the next 7 days. Sodexo posts menus only a few days ahead, so check back."));
+    return;
+  }
+  $("#week").replaceChildren(...[...groupBy(entries, (entry) => entry.date)].map(([date, dayEntries]) =>
+    h("section", { class: "card" },
+      h("h3", {}, longDayLabel(date)),
+      [...groupBy(dayEntries, (entry) => `${entry.meal}|${entry.hall}`).values()].map((slot) => {
+        const first = slot[0];
+        const dishes = [...new Set(slot.map((entry) => entry.dish))];
+        const keywords = [...new Set(slot.map((entry) => `"${entry.keyword}"`))];
+        return h("div", { class: "slot" },
+          h("div", {},
+            h("strong", {}, `${first.meal} · ${first.hall}`), " ",
+            h("span", { class: "muted small" }, hoursLabel(first.start_time, first.end_time))),
+          h("div", {}, dishes.join(", ")),
+          h("div", { class: "muted small" }, `matches ${keywords.join(", ")}`));
+      }))));
+}
+
+// ---------- page setup ----------
+
+function showTab(name) {
+  for (const button of document.querySelectorAll(".tabs button")) {
+    button.setAttribute("aria-selected", String(button.dataset.tab === name));
+  }
+  for (const section of document.querySelectorAll("main > section")) {
+    section.hidden = section.id !== `tab-${name}`;
+  }
+  if (name === "menus") renderMenu();
+  if (name === "find") $("#q").focus();
+  if (name === "favorites") loadFavorites();
+}
+
+async function refreshMenus() {
+  const button = $("#refresh");
+  button.disabled = true;
+  button.textContent = "Refreshing…";
+  try {
+    const summary = await api("/menus/refresh", { method: "POST" });
+    const failed = summary.failed.length;
+    toast(`Loaded ${summary.servings} servings for the next ${summary.days} days.` +
+      (failed ? ` ${failed} downloads failed; kept the old menus for those.` : ""), failed > 0);
+    await selectDay(state.day);
+    if (!$("#tab-favorites").hidden) await loadFavorites();
+  } catch (error) {
+    toast(`Couldn't refresh: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Refresh menus";
+  }
+}
+
+async function init() {
+  const savedDiet = recall("diet") || "";
+  for (const select of [$("#diet"), $("#find-diet")]) {
+    select.replaceChildren(...DIETS.map(([value, label]) => h("option", { value }, label)));
+    select.value = DIETS.some(([value]) => value === savedDiet) ? savedDiet : "";
+    select.addEventListener("change", () => remember("diet", select.value));
+  }
+  $("#diet").addEventListener("change", renderMenu);
+  $("#hall").addEventListener("change", renderMenu);
+  for (const button of document.querySelectorAll(".tabs button")) {
+    button.addEventListener("click", () => showTab(button.dataset.tab));
+  }
+  $("#refresh").addEventListener("click", refreshMenus);
+  $("#find-form").addEventListener("submit", search);
+  $("#save-form").addEventListener("submit", saveSearch);
+
+  try {
+    [state.halls, state.favorites] = await Promise.all([api("/locations"), api("/favorites")]);
+  } catch (error) {
+    toast(`Can't reach the app: ${error.message}`, true);
+    return;
+  }
+  $("#hall").replaceChildren(
+    h("option", { value: "" }, "All halls"),
+    ...state.halls.map((hall) => h("option", { value: hall.slug }, hall.name)));
+  $("#save-halls").replaceChildren(...hallCheckboxes());
+  await selectDay(todayIso());
+}
+
+init();
+</script>
+</body>
+</html>
