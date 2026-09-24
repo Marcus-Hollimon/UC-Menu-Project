@@ -41,6 +41,8 @@ The first three commands run once: create a private Python environment in `.venv
 
 These commands call `.venv`'s Python directly instead of "activating" the environment, because Windows often blocks the activate script ("running scripts is disabled on this system").
 
+**Keep it on your own computer.** The app has no accounts or passwords, so it only accepts connections from the computer it runs on. Don't start it with `--host 0.0.0.0` (for example, to open it on your phone), especially on campus Wi-Fi. Anyone on the same network could then read and change your favorites, or make your computer send repeated requests to Sodexo.
+
 If you pull a version that changes the database tables, rebuild them with `.venv\Scripts\python.exe -m app.ingest --reset` (macOS/Linux: `.venv/bin/python -m app.ingest --reset`). This also deletes your favorites.
 
 ## API

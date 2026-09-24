@@ -163,7 +163,7 @@ Sodexo menu API ──> app/ingest.py ──> uc_menu.db (SQLite) ──> FastAP
 ```
 
 - Everything runs on the student's computer: `uvicorn app.main:app`, then open http://127.0.0.1:8000.
-- Menus change daily, so the page has a Refresh button. It calls `POST /menus/refresh`, which is safe to leave unauthenticated because only the local machine can reach it.
+- Menus change daily, so the page has a Refresh button. It calls `POST /menus/refresh`, which is safe to leave unauthenticated because only the local machine can reach it. That depends on the server's default listen address (127.0.0.1), so the README warns against starting it with `--host 0.0.0.0`.
 - Meal times come from each hall's regular hours in `app/halls.py`. Sodexo's menu API has no times.
 
 ### 6.2 Database changes
@@ -301,9 +301,15 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 
 ## 10. Known risks and limitations
 
-- **Unofficial data source.** The Sodexo API and key come from the UC Dining website's own requests and could change without notice. A full refresh is 21 requests.
+- **Unofficial data source.** The Sodexo API and key come from the UC Dining website's own requests and could change without notice.
+  - The key isn't secret: the UC Dining website sends it to every visitor's browser. But the service is Sodexo's, and calling it from another app may not be something their terms allow.
+  - The app keeps its traffic small: 21 requests per refresh, 4 at a time, with at most one retry each, and only when the user asks for a refresh.
 - **Menus show what's planned.** Dishes can run out or be swapped (2.1).
-- **Diet labels are Sodexo's and inconsistent** (6.3). The app never claims a dish is safe for an allergy.
+- **Diet labels are Sodexo's and inconsistent** (6.3). The app never claims a dish is safe for an allergy; the page footer and the README tell people to ask dining staff.
+- **Security (reviewed 2026-09-24).** Low risk while the app runs only on the user's own computer and stores only menus and favorites.
+  - Checked and passing: no password or `.env` in the git history; dish names are inserted into the page as text, not HTML; every database query is parameterized; no known vulnerabilities in the 28 installed libraries (pip-audit); the server listens only on 127.0.0.1; a forged cross-site "add favorite" request is rejected.
+  - Not blocked: a request that names another website as its host (DNS rebinding). The data at stake is a favorites list; a one-line host check would close it.
+  - Open item: reset the Neon password (it was shared in a chat log).
 - **Short menu horizon.** Sodexo publishes some halls only a few days ahead, so the end of the 7-day window can be empty.
 - **Hard-coded hours.** Breaks and holidays show regular hours.
 - **Broad matching over-matches** (6.4).
