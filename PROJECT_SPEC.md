@@ -148,7 +148,7 @@ Two students were asked five open questions (what they ate yesterday, what they 
 | P2 | Done | `/docs` | |
 | P3 | Done: every tab clicked through in Edge (light, dark, phone width) 2026-09-24 | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
 | P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
-| P5 | Ongoing: 53 tests passing | `tests/` | |
+| P5 | Ongoing: 59 tests passing | `tests/` | |
 
 ---
 
