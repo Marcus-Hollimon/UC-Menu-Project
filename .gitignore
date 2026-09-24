@@ -3,5 +3,3 @@ __pycache__/
 .pytest_cache/
 *.db
 .env
-# A separate class activity that lives in this folder; not part of this project.
-squirrel-template-activity/
