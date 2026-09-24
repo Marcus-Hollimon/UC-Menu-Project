@@ -221,13 +221,14 @@ Backlog (only widens matches): ignore apostrophes and punctuation ("general tsos
 Only needed if the instructor says a public repo is not enough (open decision 1). What already exists:
 - `DATABASE_URL` switches the app to Postgres (psycopg 3).
 - A Neon database was created and passed a smoke test on 2026-09-22. It still holds that test data.
+- Its password was reset on 2026-09-24, after the original had been shared in a chat log.
 - The local `.env` line is commented out, so local runs use SQLite.
 
 What a hosted version would still need:
 - A per-browser ID so visitors don't share one favorites list.
 - `POST /menus/refresh` locked or replaced with a scheduled job.
-- A Render (or similar) web service.
-- A new Neon password, since the current one was shared in a chat log.
+- A Render (or similar) web service, with its address added to the app's allowed hosts (`ALLOWED_HOSTS` in `app/main.py`).
+- Neon's tables rebuilt with `python -m app.ingest --reset`, since they predate the nutrition and diet columns (6.2).
 
 ---
 
@@ -309,7 +310,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 - **Security (reviewed 2026-09-24).** Low risk while the app runs only on the user's own computer and stores only menus and favorites.
   - Checked and passing: no password or `.env` in the git history; dish names are inserted into the page as text, not HTML; every database query is parameterized; no known vulnerabilities in the 28 installed libraries (pip-audit); the server listens only on 127.0.0.1; a forged cross-site "add favorite" request is rejected.
   - Added the same day: the app refuses any request not addressed to `127.0.0.1` or `localhost` (`TrustedHostMiddleware` in `app/main.py`). This blocks DNS rebinding, and also requests over the local network if someone starts it with `--host 0.0.0.0`. Tested in `tests/test_security.py`.
-  - Open item: reset the Neon password (it was shared in a chat log).
+  - The Neon password, shared in a chat log on 2026-09-22, was reset on 2026-09-24.
 - **Short menu horizon.** Sodexo publishes some halls only a few days ahead, so the end of the 7-day window can be empty.
 - **Hard-coded hours.** Breaks and holidays show regular hours.
 - **Broad matching over-matches** (6.4).
