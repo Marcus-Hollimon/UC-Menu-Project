@@ -1,12 +1,13 @@
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.halls import HallSlug, campus_today
 from app.ingest import RefreshSummary, refresh_menus
+from app.sodexo import MissingApiKey
 from app.models import Diet, Location, MenuItem, Schedule, has_diet, matches_keyword, select_servings
 from app.schemas import MenuItemOut, Serving
 
@@ -57,4 +58,7 @@ def browse_menu(
 @router.post("/menus/refresh", response_model=RefreshSummary)
 def refresh(days: int = Query(7, ge=1, le=14), db: Session = Depends(get_db)):
     """Download the next `days` days of menus from Sodexo. Takes several seconds."""
-    return refresh_menus(db, start=campus_today(), days=days)
+    try:
+        return refresh_menus(db, start=campus_today(), days=days)
+    except MissingApiKey as error:
+        raise HTTPException(status_code=503, detail=str(error))

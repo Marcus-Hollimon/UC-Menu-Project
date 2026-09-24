@@ -15,7 +15,9 @@ The web page has three tabs:
 
 **2. Get the code.** With Git: `git clone https://github.com/Marcus-Hollimon/UC-Menu-Project.git`. Without Git: on the GitHub page, click **Code → Download ZIP** and unzip it.
 
-**3. Open a terminal in the project folder** (the one containing `README.md`) and run:
+**3. Get the menu API key** (see "Get the menu API key" below) and save it. Open a terminal in the project folder (the one containing `README.md`), run `copy .env.example .env` on Windows or `cp .env.example .env` on macOS/Linux, then open `.env` in a text editor and paste the key after `SODEXO_API_KEY=`. The key isn't included in this repository. `.env` is ignored by git, so it stays on your computer.
+
+**4. In the same terminal, run:**
 
 Windows (PowerShell):
 
@@ -35,13 +37,27 @@ python3 -m venv .venv
 .venv/bin/python -m uvicorn app.main:app
 ```
 
-**4. Open http://127.0.0.1:8000.** The app runs until you press Ctrl+C in the terminal. Next time, only the last command is needed.
+**5. Open http://127.0.0.1:8000.** The app runs until you press Ctrl+C in the terminal. Next time, only the last command is needed.
 
-The first three commands run once: create a private Python environment in `.venv`, install the libraries into it, and download the next 7 days of menus into a local SQLite file, `uc_menu.db`. Menus change daily. Use the **Refresh menus** button on the page to fetch new ones. Sodexo posts menus only a few days ahead, so later days may be empty. If the download reports failures, Sodexo was slow to answer; refresh again later.
+The first three commands run once: create a private Python environment in `.venv`, install the libraries into it, and download the next 7 days of menus into a local SQLite file, `uc_menu.db`. If the key is missing, the download stops and says so. Menus change daily. Use the **Refresh menus** button on the page to fetch new ones. Sodexo posts menus only a few days ahead, so later days may be empty. If the download reports failures, Sodexo was slow to answer; refresh again later.
 
 These commands call `.venv`'s Python directly instead of "activating" the environment, because Windows often blocks the activate script ("running scripts is disabled on this system").
 
 **Keep it on your own computer.** The app has no accounts or passwords, so it only accepts connections from the computer it runs on. Don't start it with `--host 0.0.0.0` (for example, to open it on your phone), especially on campus Wi-Fi. Anyone on the same network could then read and change your favorites, or make your computer send repeated requests to Sodexo. As a backstop, the app refuses any request not addressed to `127.0.0.1` or `localhost` ("Invalid host header").
+
+### Get the menu API key
+
+The UC Dining website loads its menus from Sodexo's menu API, and your browser sends the API's key with every menu request it makes. This app uses the same key, for your own personal, non-commercial use.
+
+1. In Chrome or Edge, open https://ucdining.sodexomyway.com/en-us/locations/on-the-green.
+2. Press **F12** to open the developer tools, and choose the **Network** tab.
+3. Reload the page (**F5**). In the Network tab's filter box, type `api-prd`.
+4. Click the request whose name starts with `150721`, and look under **Headers → Request Headers** for **Api-Key**.
+5. Copy that value into `.env` as `SODEXO_API_KEY=<the value>`.
+
+If Sodexo ever changes the key, downloads start failing; repeat these steps to get the new one.
+
+### Updating
 
 If you pull a version that changes the database tables, rebuild them with `.venv\Scripts\python.exe -m app.ingest --reset` (macOS/Linux: `.venv/bin/python -m app.ingest --reset`). This also deletes your favorites.
 
@@ -101,4 +117,4 @@ tests/             pytest suite and fixture menus
 
 ## Optional: Postgres
 
-The app can use Postgres instead of SQLite. Copy `.env.example` to `.env` and set `DATABASE_URL` to a Postgres connection string. `.env` is git-ignored so the password never gets committed. This was set up for hosting, which is on hold (see `PROJECT_SPEC.md` section 6.6).
+The app can use Postgres instead of SQLite. In `.env`, remove the `# ` in front of `DATABASE_URL` and set it to a Postgres connection string. `.env` is git-ignored so the password never gets committed. This was set up for hosting, which is on hold (see `PROJECT_SPEC.md` section 6.6).

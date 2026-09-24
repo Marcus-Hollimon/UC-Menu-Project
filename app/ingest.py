@@ -121,6 +121,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Check before anything else, so --reset never empties the database and then can't refill it.
+    try:
+        sodexo.api_key()
+    except sodexo.MissingApiKey as error:
+        raise SystemExit(str(error))
+
     print(f"Database: {engine.url.render_as_string(hide_password=True)}")
     if args.reset:
         Base.metadata.drop_all(engine)

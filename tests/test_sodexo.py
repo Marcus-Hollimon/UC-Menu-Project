@@ -4,21 +4,72 @@ Requirements: D1 (7 days of menus), D3 (nutrition and diet labels), D4 (keep old
 and how the app uses Sodexo's data (PROJECT_SPEC.md decision 8).
 """
 import datetime as dt
+import re
+from pathlib import Path
 
 import httpx
 import pytest
 from sqlalchemy import func, select
 
+from app import ingest, sodexo
 from app.halls import HALLS, HallSlug
 from app.ingest import refresh_menus
 from app.models import Schedule
 from app.sodexo import HEADERS, NON_FOOD_INGREDIENTS, clean_text, flatten_menu, parse_amount
 from tests.conftest import MENU_DAY, fake_fetch, load_fixture
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Sodexo's key has this shape (a UUID); nothing in the repository should.
+KEY_SHAPE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+
 
 def test_requests_name_this_app_instead_of_posing_as_the_dining_site():
     assert "Origin" not in HEADERS
     assert "UC-Menu-Project" in HEADERS["User-Agent"]
+
+
+def test_no_api_key_is_kept_in_the_repository():
+    files = [*PROJECT_ROOT.glob("app/**/*.py"), *PROJECT_ROOT.glob("app/static/*"), *PROJECT_ROOT.glob("tests/**/*"),
+             *PROJECT_ROOT.glob("*.md"), PROJECT_ROOT / ".env.example"]
+    for path in files:
+        if path.is_file():
+            assert not KEY_SHAPE.search(path.read_text(encoding="utf-8", errors="ignore")), path.name
+
+
+def test_fetch_menu_sends_the_key_from_the_environment(monkeypatch):
+    sent = {}
+
+    def fake_get(url, params, headers, timeout):
+        sent.update(headers)
+        return httpx.Response(200, json=[], request=httpx.Request("GET", url))
+
+    monkeypatch.setenv("SODEXO_API_KEY", "key-from-dot-env")
+    monkeypatch.setattr(sodexo.httpx, "get", fake_get)
+
+    assert sodexo.fetch_menu(HALLS[HallSlug.MARKETPOINTE], MENU_DAY) == []
+    assert sent["Api-Key"] == "key-from-dot-env"
+
+
+def test_refresh_button_explains_a_missing_key(client, monkeypatch):
+    monkeypatch.delenv("SODEXO_API_KEY", raising=False)
+
+    response = client.post("/menus/refresh", params={"days": 1})
+
+    assert response.status_code == 503
+    assert "SODEXO_API_KEY" in response.json()["detail"]
+
+
+def test_command_line_stops_before_touching_the_database_without_a_key(monkeypatch):
+    def must_not_run(*args, **kwargs):
+        raise AssertionError("touched the database without a key")
+
+    monkeypatch.delenv("SODEXO_API_KEY", raising=False)
+    monkeypatch.setattr("sys.argv", ["app.ingest", "--reset"])
+    monkeypatch.setattr(ingest.Base.metadata, "drop_all", must_not_run)
+    monkeypatch.setattr(ingest, "init_db", must_not_run)
+
+    with pytest.raises(SystemExit, match="SODEXO_API_KEY"):
+        ingest.main()
 
 
 @pytest.mark.parametrize("slug", [hall.value for hall in HallSlug])

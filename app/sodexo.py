@@ -8,6 +8,7 @@ It has no meal times; those come from app.halls.
 """
 import datetime as dt
 import html
+import os
 import re
 from dataclasses import dataclass
 
@@ -16,13 +17,28 @@ import httpx
 from app.halls import Hall
 
 API_URL = "https://api-prd.sodexomyway.net/v0.2/data/menu/{location_id}/{menu_id}"
+# The API requires the key the UC Dining website gives every visitor's browser. It is not
+# kept in this repository: each user copies it into their own .env file (see the README).
+API_KEY_SETTING = "SODEXO_API_KEY"
 HEADERS = {
-    # The public key the UC Dining website gives every visitor's browser. The API requires it.
-    "Api-Key": "REMOVED-SODEXO-API-KEY",
     # Say honestly who is asking, instead of posing as a browser on the UC Dining site
     # (tested 2026-09-24: the API answers without an Origin header or a browser User-Agent).
     "User-Agent": "UC-Menu-Project student app (https://github.com/Marcus-Hollimon/UC-Menu-Project)",
 }
+
+
+class MissingApiKey(RuntimeError):
+    """SODEXO_API_KEY isn't set, so no menus can be downloaded."""
+
+
+def api_key() -> str:
+    key = os.environ.get(API_KEY_SETTING, "").strip()
+    if not key:
+        raise MissingApiKey(
+            f"{API_KEY_SETTING} isn't set, so menus can't be downloaded. "
+            "See 'Get the menu API key' in the README."
+        )
+    return key
 # Sodexo lists placeholder "dishes" such as "Have a Nice Day" with this ingredient text.
 NON_FOOD_INGREDIENTS = {"Plate Cost Peripherals"}
 
@@ -46,9 +62,13 @@ class MenuRow:
 
 
 def fetch_menu(hall: Hall, day: dt.date) -> list[dict]:
-    """Raw menu JSON for one hall on one day. Raises httpx.HTTPError or ValueError on failure."""
+    """Raw menu JSON for one hall on one day.
+
+    Raises MissingApiKey if the key isn't set, or httpx.HTTPError / ValueError if the download fails.
+    """
     url = API_URL.format(location_id=hall.sodexo_location_id, menu_id=hall.sodexo_menu_id)
-    response = httpx.get(url, params={"date": day.isoformat()}, headers=HEADERS, timeout=20)
+    headers = {**HEADERS, "Api-Key": api_key()}
+    response = httpx.get(url, params={"date": day.isoformat()}, headers=headers, timeout=20)
     response.raise_for_status()
     meals = response.json()
     if not isinstance(meals, list):
