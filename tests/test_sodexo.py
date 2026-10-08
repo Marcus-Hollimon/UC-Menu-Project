@@ -29,11 +29,15 @@ def test_requests_name_this_app_instead_of_posing_as_the_dining_site():
 
 
 def test_no_api_key_is_kept_in_the_repository():
-    files = [*PROJECT_ROOT.glob("app/**/*.py"), *PROJECT_ROOT.glob("app/static/*"), *PROJECT_ROOT.glob("tests/**/*"),
-             *PROJECT_ROOT.glob("*.md"), PROJECT_ROOT / ".env.example"]
+    # Only the project's own source files: generated caches (__pycache__) contain the folder's
+    # full path, which can itself include a UUID-shaped name.
+    files = [
+        *PROJECT_ROOT.glob("app/**/*.py"), *PROJECT_ROOT.glob("app/static/*.html"),
+        *PROJECT_ROOT.glob("tests/**/*.py"), *PROJECT_ROOT.glob("tests/fixtures/*.json"),
+        *PROJECT_ROOT.glob("*.md"), PROJECT_ROOT / ".env.example", PROJECT_ROOT / "requirements.txt",
+    ]
     for path in files:
-        if path.is_file():
-            assert not KEY_SHAPE.search(path.read_text(encoding="utf-8", errors="ignore")), path.name
+        assert not KEY_SHAPE.search(path.read_text(encoding="utf-8")), path.name
 
 
 def test_fetch_menu_sends_the_key_from_the_environment(monkeypatch):

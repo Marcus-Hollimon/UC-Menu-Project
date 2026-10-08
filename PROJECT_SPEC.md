@@ -148,7 +148,7 @@ Two students were asked five open questions (what they ate yesterday, what they 
 | P2 | Done | `/docs` | |
 | P3 | Done: every tab clicked through in Edge (light, dark, phone width) 2026-09-24 | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
 | P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
-| P5 | Ongoing: 63 tests passing | `tests/` | |
+| P5 | Ongoing: 67 tests passing | `tests/` | |
 
 ---
 
@@ -165,6 +165,7 @@ Sodexo menu API ──> app/ingest.py ──> uc_menu.db (SQLite) ──> FastAP
 - Everything runs on the student's computer: `uvicorn app.main:app`, then open http://127.0.0.1:8000.
 - Menus change daily, so the page has a Refresh button. It calls `POST /menus/refresh`, which is safe to leave unauthenticated because only the local machine can reach it. That depends on the server's default listen address (127.0.0.1), so the README warns against starting it with `--host 0.0.0.0`.
 - Meal times come from each hall's regular hours in `app/halls.py`. Sodexo's menu API has no times.
+- The Sodexo API key is not in the repository. Each user copies it from their own browser into `.env` as `SODEXO_API_KEY` (README, "Get the menu API key"). Without it, a refresh stops with one clear message, and the command line checks before `--reset` can empty the database.
 
 ### 6.2 Database changes
 
@@ -256,6 +257,7 @@ Done when: someone following only the README can open the page, see tonight's di
     1. `python` opens a Microsoft Store stub on a PC without Python. The README now says where to get Python.
     2. The Windows `activate` script is often blocked by PowerShell. The README now calls `.venv`'s Python directly.
     3. 8 of 21 menu downloads timed out while Sodexo was slow. Downloads are now retried once (D4).
+  - Fresh clone, 2026-10-08, after the key moved to `.env` and the history was rewritten (decision 8): copying `.env.example`, adding the key, install, menu download, the page, and all tests worked. One problem found and fixed: the "no API key in the repository" test also scanned Python's cache files, which contain the folder path, so it failed in any folder whose path contains a UUID-shaped name. It now scans only source files.
 - If possible, a short walkthrough of the page with an interview participant, noting confusion.
 - Write up results, including failures.
 
@@ -297,7 +299,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 | 5 | Keyword matching | **Broad** substring matching, decided 2026-09-22 (6.4). |
 | 6 | Web page technology | **Plain HTML + JS**, no build step, decided 2026-09-22. |
 | 7 | Meal hours | **Hard-coded** regular hours; breaks and holidays not handled. |
-| 8 | How the app uses Sodexo's data | **Decided** 2026-09-24, after reading UC's terms (section 10): requests name the app honestly instead of posing as the dining site, and the public repo holds no Sodexo descriptions or ingredient lists. Asking UC Dining for permission is optional. |
+| 8 | How the app uses Sodexo's data | **Decided** 2026-09-24, after reading UC's terms (section 10): requests name the app honestly instead of posing as the dining site, and the public repo holds no Sodexo descriptions or ingredient lists. The API key moved from the code to each user's `.env`, and the git history was rewritten so neither the key nor the old Sodexo text appears in any commit. Asking UC Dining for permission is optional. |
 
 ---
 
@@ -308,6 +310,8 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
   - **UC's terms** (SodexoMyWay Terms and Conditions, last updated November 2022): no rule against automated access or scraping; use must be "non-commercial and personal", which a student running their own copy fits; but no one may "copy, reproduce, distribute… its related data… without Our prior written authorization." The public repo's test files held real Sodexo menus with descriptions and ingredient lists, so those were removed (decision 8).
   - **Copyright:** dish names, calories and times are facts, which *Feist v. Rural* (1991) says aren't copyrightable.
   - **Honest requests:** the app used to send an `Origin` header and a browser User-Agent copied from the dining site. Testing showed the API only requires the key, so requests now name the app and link the repo.
+  - **The key is no longer published.** It moved from `app/sodexo.py` to each user's own `.env`, and the git history was rewritten (`git filter-repo`) so no commit contains it or the old Sodexo text. GitHub can still serve the old, now-unlisted commits to anyone who has their exact IDs, until GitHub purges them.
+  - **A second AI disagreed.** A Google AI answer called this "exceeding authorized access" and said displaying the data is redistribution. Checked against the sources: *Van Buren* rejected that "intended purpose" reading, and UC's terms allow personal use. Its advice to keep the key out of the repo was still adopted, for portfolio safety.
   - **Remaining risk:** Sodexo can change the key, block the app, or ask it to stop. If asked, stop (hiQ won on the CFAA but still ended with a $500,000 judgment on other claims after being told to stop).
   - The app keeps its traffic small: 21 requests per refresh, 4 at a time, with at most one retry each, and only when the user asks for a refresh.
 - **Menus show what's planned.** Dishes can run out or be swapped (2.1).
