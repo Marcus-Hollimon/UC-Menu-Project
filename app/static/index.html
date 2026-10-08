@@ -136,6 +136,8 @@
   table.matches tbody tr:hover { background: var(--accent-soft); }
   table.matches tbody tr.selected { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
   .fave-chip strong { font-weight: 600; }
+  .filter-note { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
+  button.link { padding: 0; border: none; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; }
   .editor { border-color: var(--accent); }
   .editor-head { display: flex; gap: 8px; align-items: center; }
   .checks { display: flex; flex-wrap: wrap; gap: 8px 14px; }
@@ -596,17 +598,31 @@ async function loadFaves() {
 function renderFaves() {
   const active = state.favorites.filter((fave) => !fave.archived);
   const archived = state.favorites.filter((fave) => fave.archived);
+  const open = state.favorites.find((fave) => fave.id === state.openFave);
   setContent($("#fave-chips"), active.length
     ? active.map((fave) => faveChip(fave, state.matches.active))
     : h("p", { class: "empty" }, "No faves yet. Search for a dish and save it, or tap ☆ next to any dish."));
-  setContent($("#fave-table"), active.length ? matchTable(state.matches.active,
+  setContent($("#fave-table"), active.length ? faveTable(state.matches.active, open && !open.archived ? open : null,
     "None of your faves are on this week's menus. Sodexo posts menus only a few days ahead, so check back.") : null);
   setContent($("#archived-chips"), archived.length
     ? archived.map((fave) => faveChip(fave, state.matches.archived))
     : h("p", { class: "empty" }, "Nothing archived. Open a fave to move it here."));
-  setContent($("#archived-table"), archived.length ? matchTable(state.matches.archived,
+  setContent($("#archived-table"), archived.length ? faveTable(state.matches.archived, open && open.archived ? open : null,
     "None of your archived faves are on this week's menus.") : null);
   renderEditor();
+}
+
+// While a fave is open, its table shows only that fave's rows. The author chose this
+// because "pizza" alone filled 93 of 143 rows.
+function faveTable(matches, open, emptyText) {
+  if (!open) return matchTable(matches, emptyText);
+  const own = matches.filter((match) => match.favorite_id === open.id);
+  return [
+    h("p", { class: "filter-note" },
+      `Showing only "${open.keyword}", served ${plural(own.length, "time", "times")} this week. `,
+      h("button", { type: "button", class: "link", onclick: () => openFave(open.id) }, "Show all faves")),
+    matchTable(own, `"${open.keyword}" isn't on this week's menus.`),
+  ];
 }
 
 function faveScope(fave) {

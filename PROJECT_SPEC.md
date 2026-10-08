@@ -235,6 +235,7 @@ Redesigned 2026-10-08 from the author's hand-drawn sketches (three designs; Desi
 - **Faves tab (from the author's Faves sketch):**
   - A row of the user's faves, including ones not on this week's menus, so every fave can be reached.
   - "This week": a table of hall and time against food. Clicking a row, or a fave, opens that fave to edit its keyword, halls, weekdays ("only on Saturdays") and notes, archive it, or remove it.
+  - While a fave is open, its table shows only that fave's rows; clicking it again, or "Show all faves", brings every row back. Added 2026-10-08 at the author's choice, because "pizza" alone filled 93 of 143 rows.
   - "Archived faves": the same table for archived faves, whose rows open to restore or remove.
 - The header has Refresh menus. The footer says menus show what is planned, dishes can run out, and allergen data must not be relied on.
 - Dish names are inserted as text, never as HTML.
