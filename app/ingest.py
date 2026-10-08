@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 import httpx
-from sqlalchemy import Engine, delete, select
+from sqlalchemy import Engine, delete, inspect, select, text
 from sqlalchemy.orm import Session
 
 from app import sodexo
@@ -25,7 +25,7 @@ ATTEMPTS_PER_DOWNLOAD = 2
 # MenuRow fields copied onto the MenuItem row each time a dish is seen
 DISH_FIELDS = (
     "description", "is_vegan", "is_vegetarian", "is_plant_based", "is_mindful",
-    "calories", "carbs_g", "protein_g", "fat_g", "portion",
+    "calories", "carbs_g", "protein_g", "fat_g", "portion", "allergens",
 )
 
 
@@ -37,9 +37,44 @@ class RefreshSummary:
     failed: list[str] = field(default_factory=list)
 
 
+class OutdatedDatabase(RuntimeError):
+    """The database lacks a column that can't be added in place."""
+
+
+def add_missing_columns(bind: Engine) -> list[str]:
+    """Add columns the models define but an older database lacks, keeping existing rows.
+
+    create_all only creates whole tables that are missing. Each column added later needs a
+    database default (server_default), which fills it in for rows that already exist.
+    Returns the "table.column" names it added.
+    """
+    added = []
+    inspector = inspect(bind)
+    with bind.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                if column.server_default is None:
+                    raise OutdatedDatabase(
+                        f"The database has no {table.name}.{column.name} column. Rebuild it with "
+                        "`python -m app.ingest --reset` (this deletes favorites)."
+                    )
+                column_type = column.type.compile(dialect=bind.dialect)
+                default = column.server_default.arg.compile(dialect=bind.dialect)
+                not_null = "" if column.nullable else " NOT NULL"
+                conn.execute(text(
+                    f"ALTER TABLE {table.name} ADD COLUMN {column.name} {column_type}{not_null} DEFAULT {default}"
+                ))
+                added.append(f"{table.name}.{column.name}")
+    return added
+
+
 def init_db(bind: Engine) -> None:
-    """Create any missing tables and make sure every hall has a row in `locations`."""
+    """Create missing tables and columns, and make sure every hall has a row in `locations`."""
     Base.metadata.create_all(bind)
+    add_missing_columns(bind)
     with Session(bind) as db:
         for hall in HALLS.values():
             location = db.scalar(select(Location).where(Location.slug == hall.slug))

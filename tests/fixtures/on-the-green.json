@@ -61,7 +61,24 @@
             "carbohydrates": "28g",
             "protein": "10g",
             "fat": "7",
-            "portion": "SLC=1/8"
+            "portion": "SLC=1/8",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "MILK",
+                "name": "Milk",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           },
           {
             "course": "Slices",

@@ -1,7 +1,7 @@
 """Turning Sodexo's JSON into rows, meal hours, and loading rows into the database.
 
-Requirements: D1 (7 days of menus), D3 (nutrition and diet labels), D4 (keep old data on failure),
-and how the app uses Sodexo's data (PROJECT_SPEC.md decision 8).
+Requirements: D1 (7 days of menus), D3 (nutrition, diet labels, listed allergens), D4 (keep old data on failure),
+how the app uses Sodexo's data (PROJECT_SPEC.md decision 8), and upgrading an older database in place (6.2).
 """
 import datetime as dt
 import re
@@ -9,12 +9,14 @@ from pathlib import Path
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import create_engine, func, inspect, select, text
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from app import ingest, sodexo
 from app.halls import HALLS, HallSlug
 from app.ingest import refresh_menus
-from app.models import Schedule
+from app.models import Schedule, UserFavorite
 from app.sodexo import HEADERS, NON_FOOD_INGREDIENTS, clean_text, flatten_menu, parse_amount
 from tests.conftest import MENU_DAY, fake_fetch, load_fixture
 
@@ -128,6 +130,45 @@ def test_flatten_menu_reads_diet_labels_and_nutrition():
     beans = next(r for r in rows if r.name == "Sofrito Black Beans")
     assert (beans.is_vegan, beans.is_vegetarian, beans.is_plant_based, beans.is_mindful) == (True, True, True, True)
     assert (beans.calories, beans.carbs_g, beans.protein_g, beans.fat_g, beans.portion) == (45, 6, 2, 2, "1/4 CUP")
+
+
+def test_flatten_menu_reads_listed_allergens():
+    rows = {row.name: row for row in flatten_menu(load_fixture("center-court"))}
+
+    assert rows["Cheese Pizza"].allergens == ["GLUTEN", "MILK", "WHEAT"]
+    assert rows["Mexican Brown Rice"].allergens == []  # none listed, which isn't the same as none present
+
+
+def test_listed_allergens_only_counts_what_sodexo_marks_as_contained():
+    item = {"allergens": [
+        {"allergen": "MILK", "contains": "true"},
+        {"allergen": "EGGS", "contains": "false"},
+        {"allergen": "", "contains": "true"},
+    ]}
+
+    assert sodexo.listed_allergens(item) == ["MILK"]
+    assert sodexo.listed_allergens({}) == []
+
+
+def test_init_db_upgrades_an_older_database_without_losing_favorites():
+    # A database made before 2026-10-08: no allergens, days, or archived columns.
+    engine = create_engine("sqlite://", poolclass=StaticPool)
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE user_favorites (id INTEGER PRIMARY KEY, keyword VARCHAR NOT NULL, "
+                          "halls JSON NOT NULL, notes VARCHAR NOT NULL, created_at DATETIME)"))
+        conn.execute(text("CREATE TABLE menu_items (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL UNIQUE, "
+                          "description VARCHAR NOT NULL, is_vegan BOOLEAN NOT NULL, is_vegetarian BOOLEAN NOT NULL, "
+                          "is_plant_based BOOLEAN NOT NULL, is_mindful BOOLEAN NOT NULL, calories INTEGER, "
+                          "carbs_g INTEGER, protein_g INTEGER, fat_g INTEGER, portion VARCHAR NOT NULL)"))
+        conn.execute(text("INSERT INTO user_favorites (keyword, halls, notes) VALUES ('pancake', '[]', 'weekends')"))
+
+    ingest.init_db(engine)
+
+    with Session(engine) as db:
+        favorite = db.scalars(select(UserFavorite)).one()
+        assert (favorite.keyword, favorite.notes, favorite.days, favorite.archived) == ("pancake", "weekends", [], False)
+    assert {"days", "archived"} <= {c["name"] for c in inspect(engine).get_columns("user_favorites")}
+    assert "allergens" in {c["name"] for c in inspect(engine).get_columns("menu_items")}
 
 
 def test_hours_depend_on_hall_and_day_of_week():

@@ -39,6 +39,8 @@ def api_key() -> str:
             "See 'Get the menu API key' in the README."
         )
     return key
+
+
 # Sodexo lists placeholder "dishes" such as "Have a Nice Day" with this ingredient text.
 NON_FOOD_INGREDIENTS = {"Plate Cost Peripherals"}
 
@@ -59,6 +61,7 @@ class MenuRow:
     protein_g: int | None
     fat_g: int | None
     portion: str  # free text such as "3 OZ" or "SLC=1/8"
+    allergens: list[str]  # codes Sodexo lists as "contains", e.g. ["GLUTEN", "MILK"]
 
 
 def fetch_menu(hall: Hall, day: dt.date) -> list[dict]:
@@ -87,6 +90,16 @@ def parse_amount(value: str | int | None) -> int | None:
     return round(float(match.group(1))) if match else None
 
 
+def listed_allergens(item: dict) -> list[str]:
+    """Allergen codes the dish lists as contained, e.g. [{"allergen": "MILK", "contains": "true"}] -> ["MILK"]."""
+    codes = {
+        entry.get("allergen")
+        for entry in item.get("allergens") or []
+        if entry.get("allergen") and str(entry.get("contains")).lower() == "true"
+    }
+    return sorted(codes)
+
+
 def flatten_menu(meals: list[dict]) -> list[MenuRow]:
     """Turn the nested meals -> stations -> dishes JSON into one row per dish."""
     rows = []
@@ -110,5 +123,6 @@ def flatten_menu(meals: list[dict]) -> list[MenuRow]:
                     protein_g=parse_amount(item.get("protein")),
                     fat_g=parse_amount(item.get("fat")),
                     portion=clean_text(item.get("portion")),
+                    allergens=listed_allergens(item),
                 ))
     return rows

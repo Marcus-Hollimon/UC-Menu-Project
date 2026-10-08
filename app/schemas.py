@@ -4,7 +4,7 @@ import datetime as dt
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.halls import HallSlug
-from app.models import Schedule
+from app.models import Schedule, Weekday
 
 
 class LocationOut(BaseModel):
@@ -15,10 +15,14 @@ class LocationOut(BaseModel):
 
 
 class DishFacts(BaseModel):
-    """Diet labels and per-portion nutrition, as Sodexo lists them. Blank values are null."""
+    """Diet labels, listed allergens, and per-portion nutrition, as Sodexo lists them. Blank values are null."""
     model_config = ConfigDict(from_attributes=True)
 
     diets: list[str] = Field(examples=[["vegetarian", "vegan", "plant-based"]])
+    allergens: list[str] = Field(
+        examples=[["GLUTEN", "MILK", "WHEAT"]],
+        description="Allergens Sodexo lists for the dish. An empty list means none listed, not none present.",
+    )
     calories: int | None
     carbs_g: int | None
     protein_g: int | None
@@ -60,6 +64,16 @@ class Serving(DishFacts):
         )
 
 
+class AllergenCoverage(BaseModel):
+    """How many of a hall's dishes on one day list any allergen."""
+    hall: str
+    hall_slug: str
+    date: dt.date
+    dishes: int = Field(description="Dishes on the menu; one served at two meals counts twice")
+    dishes_listing_allergens: int
+    incomplete: bool = Field(description="True when fewer than 1 in 4 dishes list any allergen")
+
+
 class CalendarEntry(Serving):
     """A serving that matched one of your favorites."""
     favorite_id: int
@@ -72,7 +86,12 @@ class FavoriteIn(BaseModel):
         default_factory=list,
         description="Only match at these halls. Leave empty for all halls.",
     )
+    days: list[Weekday] = Field(
+        default_factory=list,
+        description="Only match on these weekdays, e.g. [\"saturday\"]. Leave empty for every day.",
+    )
     notes: str = Field(default="", max_length=500)
+    archived: bool = Field(default=False, description="Archived favorites are kept but listed separately.")
 
     @field_validator("keyword", mode="before")
     @classmethod
@@ -85,6 +104,11 @@ class FavoriteIn(BaseModel):
     def drop_repeated_halls(cls, value):
         return list(dict.fromkeys(value))
 
+    @field_validator("days")
+    @classmethod
+    def weekdays_in_week_order(cls, value):
+        return [day for day in Weekday if day in value]
+
 
 class FavoriteOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -92,5 +116,7 @@ class FavoriteOut(BaseModel):
     id: int
     keyword: str
     halls: list[str]
+    days: list[str]
     notes: str
+    archived: bool
     created_at: dt.datetime

@@ -7,11 +7,21 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.halls import HallSlug, campus_today
 from app.ingest import RefreshSummary, refresh_menus
+from app.models import Allergen, Diet, Location, MenuItem, Schedule, has_diet, matches_keyword, select_servings
+from app.schemas import AllergenCoverage, MenuItemOut, Serving
 from app.sodexo import MissingApiKey
-from app.models import Diet, Location, MenuItem, Schedule, has_diet, matches_keyword, select_servings
-from app.schemas import MenuItemOut, Serving
 
 router = APIRouter(tags=["menus"])
+
+# A hall-day's allergen data counts as incomplete when fewer than this share of its dishes list any allergen.
+# 2026-09-22 had 6% (17 of 20 pizzas listed nothing); 2026-10-08 had 50% (every pizza listed gluten).
+MIN_ALLERGEN_COVERAGE = 0.25
+
+
+def date_range(day: dt.date | None, days: int):
+    """SQL condition: served from `day` (default today) through the following `days - 1` days."""
+    first = day or campus_today()
+    return Schedule.date.between(first, first + dt.timedelta(days=days - 1))
 
 
 @router.get("/menu-items", response_model=list[MenuItemOut])
@@ -38,11 +48,13 @@ def browse_menu(
     meal: str | None = Query(None, examples=["Lunch"]),
     diet: Diet | None = Query(None, description="Only dishes Sodexo labels with this diet"),
     q: str | None = Query(None, min_length=2, description="Only dishes whose names contain every word"),
+    exclude_allergen: list[Allergen] = Query(
+        [], description="Hide dishes that list any of these allergens (repeatable). Dishes listing none are kept."
+    ),
     db: Session = Depends(get_db),
 ):
-    """What's served on a day (or several), optionally narrowed by hall, meal, diet or keyword."""
-    first = day or campus_today()
-    query = select_servings().where(Schedule.date.between(first, first + dt.timedelta(days=days - 1)))
+    """What's served on a day (or several), optionally narrowed by hall, meal, diet, listed allergens or keyword."""
+    query = select_servings().where(date_range(day, days))
     if hall:
         query = query.where(Location.slug == hall)
     if meal:
@@ -52,7 +64,38 @@ def browse_menu(
     if q:
         query = query.where(matches_keyword(q))
     query = query.order_by(Schedule.date, Location.name, Schedule.start_time, Schedule.station, MenuItem.name)
-    return [Serving.from_schedule(schedule) for schedule in db.scalars(query)]
+    servings = [Serving.from_schedule(schedule) for schedule in db.scalars(query)]
+    if exclude_allergen:
+        hidden = {allergen.value for allergen in exclude_allergen}
+        servings = [serving for serving in servings if not hidden & set(serving.allergens)]
+    return servings
+
+
+@router.get("/menus/allergen-coverage", response_model=list[AllergenCoverage])
+def allergen_coverage(
+    day: dt.date | None = Query(None, description="First day to include. Defaults to today."),
+    days: int = Query(1, ge=1, le=14),
+    db: Session = Depends(get_db),
+):
+    """How complete Sodexo's allergen data looks for each hall and day.
+
+    Sodexo's allergen lists come and go (6% of dishes listed any on 2026-09-22, 50% on 2026-10-08),
+    so a hall-day where few dishes list allergens is flagged and the page warns before filtering on it.
+    """
+    query = select_servings().where(date_range(day, days)).order_by(Schedule.date, Location.name)
+    counts: dict[tuple[dt.date, str], AllergenCoverage] = {}
+    for schedule in db.scalars(query):
+        key = (schedule.date, schedule.location.slug)
+        if key not in counts:
+            counts[key] = AllergenCoverage(
+                hall=schedule.location.name, hall_slug=schedule.location.slug, date=schedule.date,
+                dishes=0, dishes_listing_allergens=0, incomplete=False,
+            )
+        counts[key].dishes += 1
+        counts[key].dishes_listing_allergens += bool(schedule.menu_item.allergens)
+    for coverage in counts.values():
+        coverage.incomplete = coverage.dishes_listing_allergens < MIN_ALLERGEN_COVERAGE * coverage.dishes
+    return list(counts.values())
 
 
 @router.post("/menus/refresh", response_model=RefreshSummary)

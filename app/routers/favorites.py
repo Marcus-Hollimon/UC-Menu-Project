@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.halls import campus_today
-from app.models import Location, Schedule, UserFavorite, matches_keyword, select_servings
+from app.models import Location, Schedule, UserFavorite, matches_keyword, select_servings, weekday_of
 from app.schemas import CalendarEntry, FavoriteIn, FavoriteOut
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
@@ -50,6 +50,7 @@ def list_favorites(db: Session = Depends(get_db)):
 def favorites_calendar(
     start: dt.date | None = Query(None, description="First day to include. Defaults to today."),
     days: int = Query(7, ge=1, le=14),
+    archived: bool = Query(False, description="True for your archived favorites' matches instead"),
     db: Session = Depends(get_db),
 ):
     """Where and when your favorites are served: date, hall, meal and hours."""
@@ -57,7 +58,8 @@ def favorites_calendar(
     last = first + dt.timedelta(days=days - 1)
 
     entries = []
-    for favorite in db.scalars(select(UserFavorite).order_by(UserFavorite.id)):
+    favorites = select(UserFavorite).where(UserFavorite.archived == archived).order_by(UserFavorite.id)
+    for favorite in db.scalars(favorites):
         query = select_servings().where(
             Schedule.date.between(first, last),
             matches_keyword(favorite.keyword),
@@ -67,6 +69,8 @@ def favorites_calendar(
         entries += [
             CalendarEntry.from_schedule(schedule, favorite_id=favorite.id, keyword=favorite.keyword)
             for schedule in db.scalars(query)
+            # e.g. "pancakes, but only on Saturdays"
+            if not favorite.days or weekday_of(schedule.date) in favorite.days
         ]
 
     entries.sort(key=lambda e: (e.date, e.start_time or dt.time.min, e.hall, e.dish))

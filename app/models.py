@@ -2,7 +2,7 @@
 import datetime as dt
 from enum import StrEnum
 
-from sqlalchemy import JSON, ForeignKey, Select, and_, false, func, select
+from sqlalchemy import JSON, ForeignKey, Select, and_, false, func, select, text
 from sqlalchemy.orm import Mapped, contains_eager, mapped_column, relationship
 
 from app.database import Base
@@ -36,6 +36,37 @@ DIET_FIELDS = {
 }
 
 
+class Allergen(StrEnum):
+    """Allergen codes Sodexo uses (all seen in real menus by 2026-10-08; no shellfish code yet)."""
+    GLUTEN = "GLUTEN"
+    WHEAT = "WHEAT"
+    MILK = "MILK"
+    EGGS = "EGGS"
+    SOY = "SO"
+    SESAME = "SESAME_SEEDS"
+    FISH = "FISH"
+    TREE_NUTS = "TREE_NUTS"
+    PEANUTS = "PEANUTS"
+
+
+class Weekday(StrEnum):
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+
+
+def weekday_of(day: dt.date) -> Weekday:
+    return list(Weekday)[day.weekday()]
+
+
+# Database default for JSON list columns, so rows that existed before the column was added get [] (see ingest.init_db).
+EMPTY_LIST = text("'[]'")
+
+
 class MenuItem(Base):
     """A dish, stored once no matter how often it is served."""
     __tablename__ = "menu_items"
@@ -53,6 +84,8 @@ class MenuItem(Base):
     protein_g: Mapped[int | None]
     fat_g: Mapped[int | None]
     portion: Mapped[str] = mapped_column(default="")
+    # Allergen codes Sodexo lists as "contains". An empty list means none listed, not "none present".
+    allergens: Mapped[list[str]] = mapped_column(JSON, default=list, server_default=EMPTY_LIST)
 
     schedules: Mapped[list["Schedule"]] = relationship(back_populates="menu_item")
 
@@ -87,7 +120,11 @@ class UserFavorite(Base):
     keyword: Mapped[str]
     # Hall slugs to limit matches to; an empty list means every hall.
     halls: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Weekdays to limit matches to, e.g. ["saturday"]; an empty list means every day.
+    days: Mapped[list[str]] = mapped_column(JSON, default=list, server_default=EMPTY_LIST)
     notes: Mapped[str] = mapped_column(default="")
+    # Archived favorites are kept but listed separately, until restored.
+    archived: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[dt.datetime] = mapped_column(server_default=func.now())
 
 

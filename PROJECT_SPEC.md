@@ -1,10 +1,12 @@
 # Project Specification: UC Dining Menu Tracker
 
-Last updated: 2026-09-24
+Last updated: 2026-10-08
 
 This is the source of truth for what the app must do. Every requirement has an ID (N1, D2, P3, ...). Code and tests should point back to those IDs, and the status table in section 5 gets updated as work lands. If the code and this spec disagree, fix one of them on purpose instead of letting them drift.
 
 **Change on 2026-09-24:** after two user interviews, the project became a local-first app that anyone can download from GitHub and run on their own computer. The calendar subscription feed (C1–C3), user accounts, and hosting were dropped or put on hold. Diet filters, nutrition, and a web page moved up. Section 2.1 has the evidence; section 9 lists the decisions.
+
+**Change on 2026-10-08:** the web page was redesigned from the author's own sketches (Step 2d). It has a tab per hall plus "All halls", puts search first, hides nutrition until switched on, and adds allergen filters with a data check. Favorites can be limited to certain weekdays or archived. Decisions 4 and 9 cover the changes.
 
 ---
 
@@ -55,25 +57,29 @@ Two students were asked five open questions (what they ate yesterday, what they 
 ### 4.1 Core CRUD
 
 **N1.** Application must let a user create a watch entry for a named menu item at one or more dining locations.
-- `POST /favorites` takes `keyword`, `halls` (empty = all halls), and `notes`. Returns 201 with the saved entry.
-- Rejected with 422: keyword shorter than 2 characters after trimming, unknown hall.
+- `POST /favorites` takes `keyword`, `halls` (empty = all halls), `days` (weekdays such as `saturday`; empty = every day), `notes`, and `archived` (default false). Returns 201 with the saved entry.
+- Rejected with 422: keyword shorter than 2 characters after trimming, unknown hall, unknown weekday.
 - Rejected with 409: the keyword is already a favorite (case-insensitive).
 
 **N2.** Application must display all upcoming occurrences of the user's watched items, showing date, meal period, and location.
 - `GET /favorites/calendar` returns every stored serving from today onward that matches a favorite: date, meal, start and end time, hall, dish, station, and which favorite matched.
-- Sorted by date, then start time. The web page shows it grouped by day.
+- A favorite limited to certain weekdays only matches servings on those days.
+- Active favorites by default; `?archived=true` returns the archived favorites' matches instead.
+- Sorted by date, then start time. The web page shows them as a table of hall and time against food.
 
 **N3.** Application must let a user edit an existing watch entry, including which locations it covers.
-- `PUT /favorites/{id}` replaces keyword, halls, and notes. A missing entry returns 404.
+- `PUT /favorites/{id}` replaces keyword, halls, days, notes, and archived. A missing entry returns 404.
+- Archiving is an edit: an archived favorite is kept, but its matches move from the main list to the archived one until it's restored.
 - The next `GET /favorites/calendar` reflects the change.
 
 **N4.** Application must let a user delete a watch entry and remove its upcoming occurrences.
 - `DELETE /favorites/{id}` returns 204. Its occurrences are gone from `/favorites/calendar` immediately.
 
-**N5.** Application must let a user view a day's menu for one or all locations, filtered by meal and diet, with nutrition for each dish.
-- `GET /menus?day=&hall=&meal=&diet=`. `diet` is one of `vegetarian`, `vegan`, `plant-based`, `mindful` and keeps dishes Sodexo labels that way. Unknown values return 422.
-- Each serving includes `diets`, `calories`, `carbs_g`, `protein_g`, `fat_g`, and `portion`.
-- `q` (keyword, same matching as favorites) and `days` (1–14) turn the same endpoint into a search of upcoming servings. The web page's "Find a dish" uses it to preview what a favorite would match before saving it.
+**N5.** Application must let a user view a day's menu for one or all locations, filtered by meal, diet, and listed allergens, with nutrition for each dish.
+- `GET /menus?day=&hall=&meal=&diet=&exclude_allergen=`. `diet` is one of `vegetarian`, `vegan`, `plant-based`, `mindful` and keeps dishes Sodexo labels that way. `exclude_allergen` (repeatable, e.g. `GLUTEN`) hides dishes that **list** that allergen. Unknown values return 422.
+- Each serving includes `diets`, `allergens`, `calories`, `carbs_g`, `protein_g`, `fat_g`, and `portion`.
+- `q` (keyword, same matching as favorites) and `days` (1–14) turn the same endpoint into a search of upcoming servings. The web page's search box uses it over the next 7 days, so it shows what a favorite would match before it's saved.
+- `GET /menus/allergen-coverage?day=&days=` reports, for each hall and day, how many dishes list any allergen, and flags a hall-day as `incomplete` when fewer than 1 in 4 do (6.3). The page warns whenever an allergen filter is on for an incomplete hall-day.
 
 ### 4.2 Data
 
@@ -88,8 +94,8 @@ Two students were asked five open questions (what they ate yesterday, what they 
 **D3.** Application must record nutrition and diet labels where the source provides them.
 - Per dish: calories, carbohydrates (g), protein (g), fat (g), portion text, and the diet flags `isVegan`, `isVegetarian`, `isPlantBased`, `isMindful`.
 - A value Sodexo leaves blank is stored as empty (null), never as 0.
+- Per dish, also the allergen codes Sodexo lists as "contains" (e.g. `GLUTEN`, `MILK`, `SO` for soy).
 - Exposed in `/menu-items`, `/menus`, and `/favorites/calendar`.
-- Allergens are not stored or filtered (6.3).
 
 **D4.** Application must keep serving the last successfully retrieved menu data if the source is unavailable.
 - A failed download is retried once. Sodexo sometimes stalls past the 20-second timeout on one request and answers the next in under a second.
@@ -115,11 +121,12 @@ Two students were asked five open questions (what they ate yesterday, what they 
 
 **P2.** Interactive Swagger/OpenAPI docs at `/docs` cover every endpoint.
 
-**P3.** A web page at `/` lets a user:
-- see one meal at every hall side by side, for any of the next 7 days, filtered by hall and diet, with nutrition per dish
-- search upcoming servings for a keyword and save it as a favorite, choosing halls and notes
-- list, edit, and delete favorites
-- see this week's matches for their favorites, grouped by day
+**P3.** A web page at `/`, following the author's Design 1 sketch (6.5), lets a user:
+- search first: find dishes across the next 7 days in all halls or one hall, and save the search as a favorite
+- browse a day's menu by hall, grouped by meal with times, filtered by meal, diet, and listed allergens
+- show or hide nutrition (hidden by default to keep the screen uncluttered)
+- see when their favorites are served this week as a table, and click a row to edit, archive, or remove that favorite
+- limit a favorite to certain weekdays, and restore or remove archived favorites
 - refresh menus from Sodexo
 
 **P4.** The code is in a public GitHub repository, and the README lets someone clone it, install it, load menus, and open the page.
@@ -133,22 +140,22 @@ Two students were asked five open questions (what they ate yesterday, what they 
 
 | ID | Status | Where | Tests |
 |---|---|---|---|
-| N1 | Done | `routers/favorites.py` | `test_crud.py` create tests |
-| N2 | Done: API and the page's "This week" view | `GET /favorites/calendar` | `test_calendar_*` |
-| N3 | Done | `PUT /favorites/{id}` | `test_update_*` |
+| N1 | Done, with weekdays (2026-10-08) | `routers/favorites.py` | `test_crud.py` create tests |
+| N2 | Done: API and the Faves tab's table; weekday limits and archived list added 2026-10-08 | `GET /favorites/calendar` | `test_calendar_*`, `test_archived_favorites_are_kept_but_listed_separately` |
+| N3 | Done, including archive and restore (2026-10-08) | `PUT /favorites/{id}` | `test_update_*`, `test_calendar_only_uses_chosen_weekdays` |
 | N4 | Done | `DELETE /favorites/{id}` | `test_delete_*`, `test_calendar_is_empty_after_favorite_is_deleted` |
-| N5 | Done | `GET /menus` | `test_browse_*`, `test_servings_include_nutrition`, `test_menus_can_search_several_days_by_keyword` |
+| N5 | Done; allergen filter and coverage check added 2026-10-08 | `GET /menus`, `GET /menus/allergen-coverage` | `test_browse_*`, `test_servings_include_*`, `test_menus_can_search_several_days_by_keyword`, `test_allergen_coverage_*` |
 | D1 | Done (limited by how far ahead Sodexo publishes) | `ingest.py` | `test_refresh_*` |
 | D2 | Partial: broad matching done; punctuation and plurals in backlog | `models.matches_keyword` | `test_calendar_keyword_matches_all_words_in_any_order`, `test_search_treats_wildcard_characters_literally` |
-| D3 | Done | `sodexo.py`, `models.MenuItem` | `test_parse_amount_*`, `test_flatten_menu_reads_diet_labels_and_nutrition`, `test_search_results_include_nutrition` |
+| D3 | Done; listed allergens added 2026-10-08 | `sodexo.py`, `models.MenuItem` | `test_parse_amount_*`, `test_flatten_menu_reads_*`, `test_listed_allergens_*`, `test_search_results_include_nutrition` |
 | D4 | Done | `ingest.refresh_menus` | `test_refresh_keeps_going_when_one_hall_fails`, `test_refresh_retries_a_download_that_fails_once` |
 | D5 | Done: survey recorded above | `halls.py` | manual check |
 | C1–C3 | Dropped 2026-09-24 | | |
 | P1 | Done | `models.py`, `database.py` | |
 | P2 | Done | `/docs` | |
-| P3 | Done: every tab clicked through in Edge (light, dark, phone width) 2026-09-24 | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
+| P3 | Done: redesigned from the author's sketches 2026-10-08; every tab and the Faves edit/archive/restore/remove flow clicked through in Edge (light, dark, phone width) against a copy of the real database | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
 | P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
-| P5 | Ongoing: 67 tests passing | `tests/` | |
+| P5 | Ongoing: 80 tests passing | `tests/` | |
 
 ---
 
@@ -171,7 +178,9 @@ Sodexo menu API ──> app/ingest.py ──> uc_menu.db (SQLite) ──> FastAP
 
 `menu_items` gains `is_plant_based`, `is_mindful`, `calories`, `carbs_g`, `protein_g`, `fat_g` (integers, nullable), and `portion` (text).
 
-There are no migrations. After a table change, rebuild the local database with `python -m app.ingest --reset`, which drops every table and deletes local favorites. That is acceptable because every copy is a single-user local install.
+On 2026-10-08: `menu_items` gains `allergens` (JSON list of codes), and `user_favorites` gains `days` (JSON list of weekdays) and `archived` (true/false).
+
+There is no migration tool. Instead, at startup `init_db` adds any column the models define but the database lacks, using the column's database default for rows that already exist, so existing favorites survive an upgrade. A new column without a database default can't be added that way; startup then stops and says to run `python -m app.ingest --reset`, which drops every table and deletes local favorites.
 
 ### 6.3 Nutrition and diet data (D3, N5)
 
@@ -188,13 +197,18 @@ Diet labels:
 - A missing flag makes a diet filter hide a dish that would have fit, not show one that doesn't.
 - Every dish flagged vegan on 2026-09-24 was also flagged vegetarian and plant-based.
 
-Allergens are not used. On 2026-09-22 only 31 of 484 dishes listed any allergen, and 17 of 20 pizzas listed none. A "hide dishes with milk" filter would still show pizza, so the app does not offer one.
+Allergens:
+- **2026-09-22:** only 31 of 484 dishes (6%) listed any allergen, and 17 of 20 pizzas listed none, so the allergen filter was dropped (decision 4).
+- **2026-10-08:** 210 of 422 dishes (50%) listed allergens, and all 18 pizzas listed gluten and wheat. Codes seen: `MILK`, `GLUTEN`, `WHEAT`, `SO` (soy), `EGGS`, `SESAME_SEEDS`, `FISH`, `TREE_NUTS`, `PEANUTS`. No shellfish code has appeared yet, so shellfish can't be filtered.
+- Sodexo has no "gluten-free" label. The filter can only hide dishes that **list** an allergen, so it's named "Hide dishes that list…", never "free of".
+- Because coverage swung from 6% to 50% in two weeks, each hall-day gets a check: if fewer than 1 in 4 dishes list any allergen, the data is treated as incomplete, and the page warns next to the filter for that hall and day.
+- The allergy disclaimer stays: menus are Sodexo's, and anyone with an allergy should ask dining staff.
 
 ### 6.4 Keyword matching (D2)
 
 Matching is deliberately broad. A dish matches when **every** word of the keyword appears **somewhere** in the dish name, even inside a longer word, ignoring case and word order. So "pizza" finds every pizza and "chick" finds "Chicken". Matching runs in SQL (`LIKE`, with `%` and `_` escaped so they aren't wildcards).
 
-The cost is extra matches: "ham" also finds "Graham Cracker", and "cheese" matches 35 dishes including toppings like Crumbled Feta Cheese. "Find a dish" shows what a keyword matches before it is saved, so the user can add words or pick halls.
+The cost is extra matches: "ham" also finds "Graham Cracker", and "cheese" matches 35 dishes including toppings like Crumbled Feta Cheese. The page's search shows what a keyword matches before it is saved, so the user can add words or pick a hall.
 
 Backlog (only widens matches): ignore apostrophes and punctuation ("general tsos" → "General Tso's Chicken"), and let a plural keyword match its singular ("tacos" → "Chicken Soft Taco").
 
@@ -209,12 +223,20 @@ Backlog (only widens matches): ignore apostrophes and punctuation ("general tsos
 
 ### 6.5 Web page (P3)
 
+Redesigned 2026-10-08 from the author's hand-drawn sketches (three designs; Design 1 chosen, with the Faves page from a fourth sketch). The 9/24 version led with browsing every hall at once, with nutrition always on; the author found that it showed too much too fast.
+
 - One file, `app/static/index.html`, with plain HTML, CSS, and JavaScript calling the JSON API. No build step and no CDN, so it works offline once menus are stored.
-- Three tabs:
-  - **Menus** (the default): day buttons for the next 7 days, then meal buttons for the meals served that day. It opens on the meal being served now, or the next one. Hall and diet selects. One column per hall, dishes grouped by station, each with diet labels, nutrition, and a ☆ button that saves the dish name as a favorite.
-  - **Find a dish:** keyword and diet → upcoming servings over 7 days (`/menus?q=&days=7`), grouped by dish, with a form to save the keyword as a favorite, limited to chosen halls, with notes.
-  - **My favorites:** each favorite with edit and delete, then "This week" from `/favorites/calendar`, grouped by day.
-- The header has Refresh menus. The footer says menus show what is planned and dishes can run out.
+- **Tabs:** All halls · Center Court · MarketPointe · On The Green · Faves. A hall tab is the hall filter; "All halls" compares every hall.
+- **On a hall tab, top to bottom:**
+  - **Search first.** Typing searches the next 7 days (`/menus?q=&days=7`). Results are grouped by day, then meal. A "Save as a fave" button saves the search: for the current hall on a hall tab, or every hall on "All halls".
+  - **Filters:** meal (Any, Breakfast, Brunch, Lunch, Dinner, Late Night); diet; "Hide dishes that list…" allergen checkboxes, with the incomplete-data warning (6.3); "Show nutrition", off by default and remembered.
+  - **With no search:** day buttons for the next 7 days, and that day's menu grouped by meal with its hours. On "All halls", each meal is split by hall.
+  - Each dish shows its name, station, diet labels, and a ☆ to save it as a fave. Nutrition and listed allergens appear only when "Show nutrition" is on.
+- **Faves tab (from the author's Faves sketch):**
+  - A row of the user's faves, including ones not on this week's menus, so every fave can be reached.
+  - "This week": a table of hall and time against food. Clicking a row, or a fave, opens that fave to edit its keyword, halls, weekdays ("only on Saturdays") and notes, archive it, or remove it.
+  - "Archived faves": the same table for archived faves, whose rows open to restore or remove.
+- The header has Refresh menus. The footer says menus show what is planned, dishes can run out, and allergen data must not be relied on.
 - Dish names are inserted as text, never as HTML.
 
 ### 6.6 Hosting (on hold since 2026-09-24)
@@ -295,11 +317,12 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 | 1 | Does a public GitHub repo satisfy the "public deployment" deliverable? | **Open.** Asking the instructor 2026-09-24. If not, see 6.6. |
 | 2 | Calendar subscription feed | **Dropped** 2026-09-24 (interviews, 2.1). |
 | 3 | Where the app runs | **Local first** 2026-09-24. Neon + Render on hold (6.6). |
-| 4 | Allergen filter | **Dropped** 2026-09-24. Data too sparse (6.3). |
+| 4 | Allergen filter | **Dropped** 2026-09-24 (6% of dishes listed allergens). **Reinstated** 2026-10-08 at the author's request, after coverage reached 50%: filters hide dishes that *list* an allergen, and a per-hall-day check warns when the data looks incomplete (6.3). |
 | 5 | Keyword matching | **Broad** substring matching, decided 2026-09-22 (6.4). |
 | 6 | Web page technology | **Plain HTML + JS**, no build step, decided 2026-09-22. |
 | 7 | Meal hours | **Hard-coded** regular hours; breaks and holidays not handled. |
 | 8 | How the app uses Sodexo's data | **Decided** 2026-09-24, after reading UC's terms (section 10): requests name the app honestly instead of posing as the dining site, and the public repo holds no Sodexo descriptions or ingredient lists. The API key moved from the code to each user's `.env`, and the git history was rewritten so neither the key nor the old Sodexo text appears in any commit. Asking UC Dining for permission is optional. |
+| 9 | Page layout | **Decided** 2026-10-08 by the author, from three hand-drawn designs: Design 1 (a tab per hall) plus an "All halls" tab, search first over the next 7 days, nutrition hidden until switched on, and the Faves page from the author's Faves sketch (6.5). |
 
 ---
 

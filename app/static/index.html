@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UC Dining Favorites</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e00122'/%3E%3C/svg%3E">
+<!--
+  Layout from the author's own sketches (PROJECT_SPEC.md 6.5, decision 9): a tab per hall plus
+  "All halls", search first, nutrition hidden until switched on, and a Faves tab with a
+  "hall, time | food" table and archived faves.
+-->
 <style>
   :root {
     --bg: #f6f6f4;
@@ -14,10 +19,13 @@
     --line: #e2e2dd;
     --accent: #e00122; /* UC red */
     --accent-text: #ffffff;
+    --accent-soft: #fdecee;
     --diet: #1f7a3a;
     --diet-soft: #e3f4e7;
     --mindful: #245f9e;
     --mindful-soft: #e4eefa;
+    --warn: #8a5300;
+    --warn-soft: #fff4dc;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
   }
   @media (prefers-color-scheme: dark) {
@@ -29,10 +37,13 @@
       --line: #343434;
       --accent: #ff6070;
       --accent-text: #1a0004;
+      --accent-soft: #3a1c20;
       --diet: #86d99b;
       --diet-soft: #1d3324;
       --mindful: #93c0f2;
       --mindful-soft: #1c2a3b;
+      --warn: #ffc966;
+      --warn-soft: #3a2c10;
       --shadow: none;
     }
   }
@@ -44,7 +55,7 @@
     color: var(--text);
     font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
 
   header.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 18px 0 6px; }
   h1 { margin: 0; font-size: 1.45rem; }
@@ -59,54 +70,77 @@
   button.danger { color: var(--accent); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .tabs { display: flex; gap: 4px; margin: 8px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tabs { display: flex; gap: 2px; margin: 8px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
   .tabs button { padding: 10px 14px; border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--muted); font-weight: 600; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .chips button { padding: 5px 12px; border-radius: 999px; }
-  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-
-  .filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
   label.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: .85rem; }
+  .grow { flex: 1 1 260px; }
   select, input[type="text"], input[type="search"] {
-    min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+    min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px;
     background: var(--card); color: var(--text); font: inherit;
   }
+  input[type="search"] { font-size: 1.05rem; padding: 10px 12px; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 12px; }
+  .toggle { display: flex; gap: 6px; align-items: center; padding: 7px 0; font-size: .9rem; }
+  details.allergen-menu { position: relative; }
+  details.allergen-menu summary { cursor: pointer; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); list-style: none; font-size: .9rem; }
+  details.allergen-menu summary::-webkit-details-marker { display: none; }
+  details.allergen-menu[open] summary { border-color: var(--muted); }
+  details.allergen-menu .checks {
+    position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: 240px; padding: 10px 12px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: 0 4px 16px rgb(0 0 0 / .15);
+  }
+  .count { display: inline-block; min-width: 1.4em; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: .75rem; text-align: center; }
 
-  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); align-items: start; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chips button { padding: 5px 12px; border-radius: 999px; }
+  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .chips button[aria-pressed="true"] .muted { color: inherit; opacity: .85; }
+
+  .notice-box { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); font-size: .88rem; }
+  .notice-box.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .notice-box p { margin: 0; }
+  .notice-box ul { margin: 6px 0 0; padding-left: 18px; color: var(--warn); font-weight: 600; }
+  .save-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); }
+
   .card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
-  .card > header { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-  .card h3 { margin: 0; font-size: 1.1rem; }
   .stack > * + * { margin-top: 12px; }
+  .results > * + * { margin-top: 14px; }
+  .meal h3 { margin: 0 0 4px; font-size: 1.1rem; }
+  .hall-group { padding-top: 8px; border-top: 1px solid var(--line); margin-top: 8px; }
+  .hall-group h4 { margin: 0 0 2px; font-size: .95rem; }
+  .day-heading { margin: 18px 0 8px; font-size: 1rem; }
   .muted { color: var(--muted); }
   .small { font-size: .85rem; }
   .empty { margin: 8px 0; color: var(--muted); }
   .notice { padding: 16px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); }
 
-  details.station { padding: 6px 0; border-top: 1px solid var(--line); }
-  details.station summary { cursor: pointer; padding: 2px 0; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
   ul.dishes { margin: 4px 0 0; padding: 0; list-style: none; }
-  .dish { padding: 5px 0; }
-  .dish-line { display: flex; gap: 6px; align-items: flex-start; }
-  .dish-name { flex: 1; font-weight: 600; }
+  .dish { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+  .dish-name { font-weight: 600; }
+  .station { color: var(--muted); font-size: .8rem; }
   .facts { color: var(--muted); font-size: .82rem; }
   .badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--diet-soft); color: var(--diet); font-size: .72rem; font-weight: 600; vertical-align: 1px; }
   .badge.mindful { background: var(--mindful-soft); color: var(--mindful); }
-  .star { padding: 0 2px; border: none; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; }
+  .badge.archived { background: var(--line); color: var(--muted); }
+  .star { padding: 0 2px; border: none; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1.2; }
   .star[aria-pressed="true"] { color: var(--accent); cursor: default; }
 
-  form.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
-  form.row .grow { flex: 1 1 220px; }
-  .checks { display: flex; flex-wrap: wrap; gap: 12px; }
-  .checks label { display: flex; gap: 4px; align-items: center; font-size: .9rem; }
+  table.matches { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  table.matches th { padding: 8px 12px; text-align: left; font-size: .8rem; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+  table.matches td { padding: 8px 12px; vertical-align: top; border-top: 1px solid var(--line); width: 50%; }
+  table.matches tbody tr { cursor: pointer; }
+  table.matches tbody tr:hover { background: var(--accent-soft); }
+  table.matches tbody tr.selected { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .fave-chip strong { font-weight: 600; }
+  .editor { border-color: var(--accent); }
+  .editor-head { display: flex; gap: 8px; align-items: center; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .checks label { display: flex; gap: 4px; align-items: center; font-size: .9rem; color: var(--text); }
   .actions { display: flex; flex-wrap: wrap; gap: 6px; }
-  ul.when { margin: 6px 0 0; padding-left: 18px; font-size: .9rem; }
-
-  .fav { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
-  .fav .actions { flex-shrink: 0; }
-  .slot { padding: 7px 0; border-top: 1px solid var(--line); }
-  .slot:first-of-type { border-top: none; }
 
   footer { padding: 28px 0 36px; color: var(--muted); font-size: .82rem; }
   #toast {
@@ -124,63 +158,55 @@
   <header class="top">
     <div>
       <h1>UC Dining <span>Favorites</span></h1>
-      <p class="sub">What's on at Center Court, MarketPointe and On The Green, and when your favorites are served.</p>
+      <p class="sub">Search UC's dining halls, then see when your faves are served.</p>
     </div>
     <button id="refresh" type="button">Refresh menus</button>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="Sections">
-    <button type="button" role="tab" data-tab="menus" aria-selected="true">Menus</button>
-    <button type="button" role="tab" data-tab="find" aria-selected="false">Find a dish</button>
-    <button type="button" role="tab" data-tab="favorites" aria-selected="false">My favorites</button>
-  </nav>
+  <!-- All halls · one tab per hall · Faves (filled in from /locations) -->
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Halls and faves"></nav>
 
   <main>
-    <!-- Menus: one meal at every hall, side by side (N5, Need 2) -->
-    <section id="tab-menus">
-      <div class="chips" id="days" role="group" aria-label="Day"></div>
-      <div class="chips" id="meals" role="group" aria-label="Meal"></div>
-      <div class="filters">
-        <label class="field">Hall <select id="hall"></select></label>
-        <label class="field">Diet <select id="diet"></select></label>
-      </div>
-      <div class="grid" id="menu-grid"></div>
-    </section>
-
-    <!-- Find a dish: preview what a keyword matches, then save it (N1) -->
-    <section id="tab-find" hidden>
-      <form id="find-form" class="row">
-        <label class="field grow">Dish or keyword
-          <input type="search" id="q" placeholder="e.g. pancake, tofu, general tso" minlength="2" maxlength="100" required>
+    <!-- Hall tabs and "All halls": search first, then filters, then the menu (N5) -->
+    <section id="view-menu">
+      <div class="search-row">
+        <label class="field grow">Search the next 7 days
+          <input type="search" id="q" placeholder="e.g. pancake, tofu, general tso" maxlength="100" autocomplete="off">
         </label>
-        <label class="field">Diet <select id="find-diet"></select></label>
-        <button class="primary" type="submit">Search next 7 days</button>
-      </form>
-      <form id="save-form" class="card stack" hidden>
-        <div>
-          <strong>Save "<span id="save-keyword"></span>" as a favorite</strong>
-          <div class="muted small">It will match every dish whose name contains these words. Leave every hall unchecked to watch all of them.</div>
-        </div>
-        <div class="checks" id="save-halls"></div>
-        <label class="field">Notes (optional) <input type="text" id="save-notes" maxlength="500"></label>
-        <div><button class="primary" type="submit">Save favorite</button></div>
-      </form>
-      <h2 id="results-heading" hidden>This week</h2>
-      <div id="find-results"></div>
+      </div>
+      <div class="filters">
+        <label class="field">Meal <select id="meal"></select></label>
+        <label class="field">Diet <select id="diet"></select></label>
+        <details class="allergen-menu" id="allergen-menu">
+          <summary id="allergen-summary">Hide dishes that list…</summary>
+          <div class="checks" id="allergen-checks"></div>
+        </details>
+        <label class="toggle"><input type="checkbox" id="nutrition"> Show nutrition</label>
+      </div>
+      <div id="allergen-notice" class="notice-box" role="status" hidden></div>
+      <div class="chips" id="days" role="group" aria-label="Day"></div>
+      <div id="save-bar" class="save-bar" hidden></div>
+      <div id="results" class="results"></div>
     </section>
 
-    <!-- My favorites: list, edit, delete, and this week's matches (N2-N4) -->
-    <section id="tab-favorites" hidden>
-      <div id="fav-list" class="stack"></div>
-      <h2 id="week-heading">This week</h2>
-      <div id="week" class="stack"></div>
+    <!-- Faves: when they're served, editing, archiving (N1-N4), from the author's Faves sketch -->
+    <section id="view-faves" hidden>
+      <h2>Your faves</h2>
+      <div class="chips" id="fave-chips"></div>
+      <div id="fave-editor"></div>
+      <h2>This week</h2>
+      <div id="fave-table"></div>
+      <h2>Archived faves</h2>
+      <div class="chips" id="archived-chips"></div>
+      <div id="archived-table"></div>
     </section>
   </main>
 
   <footer>
-    Menus, nutrition and diet labels come from Sodexo and show what's planned. Dishes can run out or change, and labels
-    are sometimes missing, so don't rely on this for allergies; ask dining staff. Nutrition is per portion. Times are
-    each hall's regular hours; breaks and holidays aren't included.
+    Menus, nutrition, diet labels and allergens come from Sodexo and show what's planned. Dishes can run out or
+    change, and labels are sometimes missing: a dish that lists no allergens may still contain them, so ask dining
+    staff if you have an allergy. Nutrition is per portion. Times are each hall's regular hours; breaks and holidays
+    aren't included.
   </footer>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -190,22 +216,36 @@
 
 const $ = (selector) => document.querySelector(selector);
 
-const DIETS = [
-  ["", "Any diet"],
-  ["vegetarian", "Vegetarian"],
-  ["vegan", "Vegan"],
-  ["plant-based", "Plant-based"],
-  ["mindful", "Mindful"],
+const MEALS = ["Breakfast", "Brunch", "Lunch", "Dinner", "Late Night"];
+const DIETS = [["vegetarian", "Vegetarian"], ["vegan", "Vegan"], ["plant-based", "Plant-based"], ["mindful", "Mindful"]];
+// Sodexo's allergen codes (PROJECT_SPEC.md 6.3). No shellfish code has appeared in its data yet.
+const ALLERGENS = [
+  ["GLUTEN", "Gluten"], ["WHEAT", "Wheat"], ["MILK", "Milk"], ["EGGS", "Eggs"], ["SO", "Soy"],
+  ["SESAME_SEEDS", "Sesame"], ["FISH", "Fish"], ["TREE_NUTS", "Tree nuts"], ["PEANUTS", "Peanuts"],
 ];
+const ALLERGEN_NAMES = Object.fromEntries(ALLERGENS);
+const WEEKDAYS = [
+  ["monday", "Mon"], ["tuesday", "Tue"], ["wednesday", "Wed"], ["thursday", "Thu"],
+  ["friday", "Fri"], ["saturday", "Sat"], ["sunday", "Sun"],
+];
+const WEEKDAY_NAMES = Object.fromEntries(WEEKDAYS);
 
 const state = {
-  halls: [],      // [{slug, name}] from /locations
-  favorites: [],  // from /favorites
-  day: null,      // "YYYY-MM-DD" shown on the Menus tab
-  meal: null,     // meal name shown on the Menus tab
-  servings: [],   // everything served on `day`, every hall and meal
-  search: null,   // {q, diet, servings}: the last "Find a dish" search
+  halls: [],          // [{slug, name}] from /locations
+  favorites: [],      // from /favorites, active and archived
+  tab: "all",         // "all", a hall slug, or "faves"
+  day: null,          // "YYYY-MM-DD" shown when there's no search
+  search: "",
+  meal: "",
+  diet: "",
+  allergens: [],      // codes to hide dishes for
+  showNutrition: false,
+  servings: [],       // what /menus returned for the current tab, filters and search
+  coverage: [],       // /menus/allergen-coverage, only when an allergen filter is on
+  matches: { active: [], archived: [] },  // /favorites/calendar
+  openFave: null,     // id of the fave whose editor is open
 };
+let menuRequest = 0;  // newer requests win, so fast typing can't show stale results
 
 // ---------- helpers ----------
 
@@ -219,8 +259,16 @@ function h(tag, attrs = {}, ...children) {
     else if (key === "class") el.className = value;
     else el.setAttribute(key, value === true ? "" : value);
   }
-  el.append(...children.flat(Infinity).filter((child) => child != null && child !== false));
+  el.append(...nodesOf(children));
   return el;
+}
+
+// Children may be text, elements, or (nested) lists of them; empty values (null, false, "") are skipped.
+const nodesOf = (children) => children.flat(Infinity).filter((child) => child != null && child !== false && child !== "");
+
+// Replace an element's children.
+function setContent(el, ...children) {
+  el.replaceChildren(...nodesOf(children));
 }
 
 // Call the JSON API. Throws an Error carrying the API's message on failure.
@@ -251,10 +299,15 @@ function toast(message, isError = false) {
 
 // Browser storage can be blocked; the page works without it.
 function remember(key, value) {
-  try { localStorage.setItem(key, value); } catch (error) { /* ignore */ }
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* ignore */ }
 }
-function recall(key) {
-  try { return localStorage.getItem(key); } catch (error) { return null; }
+function recall(key, fallback) {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored == null ? fallback : JSON.parse(stored);
+  } catch (error) {
+    return fallback;
+  }
 }
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -269,8 +322,7 @@ function addDays(date, count) {
   copy.setDate(copy.getDate() + count);
   return copy;
 }
-
-// "Today", "Tomorrow", or e.g. "Sat, 9/26"
+// "Today", "Tomorrow", or e.g. "Sat, 10/10"
 function dayLabel(iso) {
   const offset = Math.round((parseIso(iso) - parseIso(todayIso())) / 86400000);
   if (offset === 0) return "Today";
@@ -282,16 +334,24 @@ function longDayLabel(iso) {
   const relative = dayLabel(iso);
   return relative === "Today" || relative === "Tomorrow" ? `${relative} · ${label}` : label;
 }
-
 // "16:30:00" -> "4:30 PM"
 function timeLabel(hhmmss) {
   const [hour, minute] = hhmmss.split(":").map(Number);
   return `${hour % 12 || 12}:${pad(minute)} ${hour < 12 ? "AM" : "PM"}`;
 }
 const hoursLabel = (start, end) => (start && end ? `${timeLabel(start)}–${timeLabel(end)}` : "");
-function nowTime() {
-  const now = new Date();
-  return `${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+const hallName = (slug) => (state.halls.find((hall) => hall.slug === slug) || { name: slug }).name;
+const hallNames = (slugs) => (slugs.length ? slugs.map(hallName).join(", ") : "Every hall");
+
+function groupBy(items, keyOf) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return groups;
 }
 
 function factsLine(dish) {
@@ -304,6 +364,11 @@ function factsLine(dish) {
   return parts.join(" · ");
 }
 
+function allergenLine(dish) {
+  if (!dish.allergens.length) return "Sodexo lists no allergens";
+  return `Lists: ${dish.allergens.map((code) => (ALLERGEN_NAMES[code] || code).toLowerCase()).join(", ")}`;
+}
+
 // Vegan dishes are also labeled vegetarian and plant-based, so show only the most specific label.
 function dietBadges(diets) {
   const main = ["vegan", "plant-based", "vegetarian"].find((diet) => diets.includes(diet));
@@ -312,7 +377,7 @@ function dietBadges(diets) {
     .map((diet) => h("span", { class: `badge ${diet}` }, diet));
 }
 
-const isFavorite = (name) => state.favorites.some((fav) => fav.keyword.toLowerCase() === name.toLowerCase());
+const isFavorite = (keyword) => state.favorites.some((fave) => fave.keyword.toLowerCase() === keyword.toLowerCase());
 
 function starButton(dishName) {
   const saved = isFavorite(dishName);
@@ -320,323 +385,330 @@ function starButton(dishName) {
     type: "button",
     class: "star",
     "aria-pressed": String(saved),
-    title: saved ? "Already a favorite" : "Save as a favorite",
-    "aria-label": saved ? `${dishName} is a favorite` : `Save ${dishName} as a favorite`,
-    onclick: saved ? null : () => addFavorite({ keyword: dishName, halls: [], notes: "" }),
+    title: saved ? "Already a fave" : "Save as a fave",
+    "aria-label": saved ? `${dishName} is a fave` : `Save ${dishName} as a fave`,
+    onclick: saved ? null : () => addFavorite({ keyword: dishName, halls: [], days: [], notes: "" }),
   }, saved ? "★" : "☆");
 }
 
-function dishItem(dish) {
-  return h("li", { class: "dish" },
-    h("div", { class: "dish-line" },
-      h("span", { class: "dish-name" }, dish.dish, dietBadges(dish.diets)),
-      starButton(dish.dish)),
-    h("div", { class: "facts" }, factsLine(dish)));
+function checkboxes(options, selected) {
+  return options.map(([value, label]) =>
+    h("label", {}, h("input", { type: "checkbox", value, checked: selected.includes(value) }), label));
 }
+const checkedValues = (container) => [...container.querySelectorAll("input:checked")].map((input) => input.value);
 
-function hallCheckboxes(selected = []) {
-  return state.halls.map((hall) =>
-    h("label", {},
-      h("input", { type: "checkbox", value: hall.slug, checked: selected.includes(hall.slug) }),
-      hall.name));
-}
-const checkedHalls = (container) => [...container.querySelectorAll("input:checked")].map((input) => input.value);
-
-function hallNames(slugs) {
-  if (!slugs.length) return "All halls";
-  return slugs.map((slug) => (state.halls.find((hall) => hall.slug === slug) || { name: slug }).name).join(", ");
-}
-
-function groupBy(items, keyOf) {
-  const groups = new Map();
-  for (const item of items) {
-    const key = keyOf(item);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
-  }
-  return groups;
-}
-
-async function addFavorite(favorite) {
+async function addFavorite(fave) {
   try {
-    const saved = await api("/favorites", { method: "POST", body: JSON.stringify(favorite) });
+    const saved = await api("/favorites", { method: "POST", body: JSON.stringify(fave) });
     state.favorites.push(saved);
-    toast(`Saved "${saved.keyword}". See when it's served under My favorites.`);
+    toast(`Saved "${saved.keyword}". See when it's served under Faves.`);
     renderMenu();
-    if (state.search) renderResults();
-    return true;
   } catch (error) {
     toast(error.message, true);
-    return false;
   }
 }
 
-// ---------- Menus tab ----------
+// ---------- tabs ----------
 
-function renderDays() {
-  const chips = [];
-  for (let offset = 0; offset < 7; offset++) {
-    const iso = isoDate(addDays(new Date(), offset));
-    chips.push(h("button", { type: "button", "aria-pressed": String(iso === state.day), onclick: () => selectDay(iso) },
-      dayLabel(iso)));
-  }
-  $("#days").replaceChildren(...chips);
+function renderTabs() {
+  const tabs = [["all", "All halls"], ...state.halls.map((hall) => [hall.slug, hall.name]), ["faves", "Faves"]];
+  setContent($("#tabs"), tabs.map(([key, label]) =>
+    h("button", { type: "button", role: "tab", "aria-selected": String(key === state.tab), onclick: () => showTab(key) }, label)));
 }
 
-async function selectDay(iso) {
-  state.day = iso;
-  renderDays();
-  $("#menu-grid").replaceChildren(h("p", { class: "empty" }, "Loading…"));
+function showTab(tab) {
+  state.tab = tab;
+  renderTabs();
+  $("#view-menu").hidden = tab === "faves";
+  $("#view-faves").hidden = tab !== "faves";
+  if (tab === "faves") loadFaves();
+  else loadMenu();
+}
+
+// ---------- hall tabs: search, filters, menu ----------
+
+const searching = () => state.search.length >= 2;
+
+async function loadMenu() {
+  const request = ++menuRequest;
+  const params = new URLSearchParams();
+  if (state.tab !== "all") params.set("hall", state.tab);
+  if (state.meal) params.set("meal", state.meal);
+  if (state.diet) params.set("diet", state.diet);
+  for (const code of state.allergens) params.append("exclude_allergen", code);
+  if (searching()) {
+    params.set("q", state.search);
+    params.set("days", "7");
+  } else {
+    params.set("day", state.day);
+  }
+  const coverageParams = new URLSearchParams(searching() ? { days: "7" } : { day: state.day });
   try {
-    state.servings = await api(`/menus?day=${iso}`);
+    const [servings, coverage] = await Promise.all([
+      api(`/menus?${params}`),
+      state.allergens.length ? api(`/menus/allergen-coverage?${coverageParams}`) : [],
+    ]);
+    if (request !== menuRequest) return;
+    state.servings = servings;
+    state.coverage = coverage;
   } catch (error) {
+    if (request !== menuRequest) return;
     state.servings = [];
+    state.coverage = [];
     toast(error.message, true);
   }
-  const meals = mealsOf(state.servings);
-  if (!meals.some((meal) => meal.name === state.meal)) state.meal = defaultMeal(meals);
-  renderMeals(meals);
   renderMenu();
 }
 
-// The meals served that day, earliest first, with the widest hours across halls.
-function mealsOf(servings) {
-  const meals = new Map();
-  for (const s of servings) {
-    const meal = meals.get(s.meal) || { name: s.meal, start: s.start_time, end: s.end_time };
-    if (s.start_time && (!meal.start || s.start_time < meal.start)) meal.start = s.start_time;
-    if (s.end_time && (!meal.end || s.end_time > meal.end)) meal.end = s.end_time;
-    meals.set(s.meal, meal);
+function renderMenu() {
+  renderDays();
+  renderAllergenNotice();
+  renderSaveBar();
+  const servings = state.servings;
+  if (!servings.length) {
+    setContent($("#results"), emptyMessage());
+    return;
   }
-  return [...meals.values()].sort((a, b) => (a.start || "99").localeCompare(b.start || "99"));
+  if (!searching()) {
+    setContent($("#results"), mealBlocks(servings));
+    return;
+  }
+  const dishes = new Set(servings.map((serving) => serving.dish)).size;
+  setContent($("#results"),
+    h("p", { class: "muted" },
+      `${plural(dishes, "dish", "dishes")} matching "${state.search}", served ${plural(servings.length, "time", "times")} in the next 7 days.`),
+    [...groupBy(servings, (serving) => serving.date)].map(([date, dayServings]) =>
+      h("section", {}, h("h2", { class: "day-heading" }, longDayLabel(date)), h("div", { class: "results" }, mealBlocks(dayServings)))));
 }
 
-// Today: the meal being served now, or the next one. Other days: the first meal.
-function defaultMeal(meals) {
-  if (!meals.length) return null;
-  if (state.day !== todayIso()) return meals[0].name;
-  const now = nowTime();
-  return (meals.find((meal) => meal.end && now < meal.end) || meals[meals.length - 1]).name;
+function emptyMessage() {
+  const filtered = state.meal || state.diet || state.allergens.length;
+  if (searching()) {
+    return h("div", { class: "notice" },
+      `Nothing matching "${state.search}"${filtered ? " with these filters" : ""} in the next 7 days. `,
+      "Sodexo posts menus only a few days ahead, so you can save it as a fave and check back.");
+  }
+  if (filtered) return h("div", { class: "notice" }, "Nothing on this day matches these filters.");
+  return h("div", { class: "notice" },
+    "No menus stored for this day. Sodexo posts menus only a few days ahead; for today or tomorrow, click ",
+    h("strong", {}, "Refresh menus"), " to download them.");
 }
 
-function renderMeals(meals) {
-  $("#meals").replaceChildren(...meals.map((meal) =>
+const earliestStart = (servings) => servings.reduce((min, s) => (s.start_time && s.start_time < min ? s.start_time : min), "99");
+
+// One card per meal, earliest first. On "All halls", each meal is split by hall.
+function mealBlocks(servings) {
+  const meals = [...groupBy(servings, (serving) => serving.meal)]
+    .sort(([, a], [, b]) => earliestStart(a).localeCompare(earliestStart(b)));
+  return meals.map(([meal, mealServings]) => {
+    if (state.tab !== "all") {
+      const first = mealServings[0];
+      return h("section", { class: "card meal" },
+        h("h3", {}, meal, " ", h("span", { class: "muted small" }, hoursLabel(first.start_time, first.end_time))),
+        h("ul", { class: "dishes" }, mealServings.map(dishRow)));
+    }
+    return h("section", { class: "card meal" },
+      h("h3", {}, meal),
+      [...groupBy(mealServings, (serving) => serving.hall)].map(([hall, dishes]) =>
+        h("div", { class: "hall-group" },
+          h("h4", {}, hall, " ", h("span", { class: "muted small" }, hoursLabel(dishes[0].start_time, dishes[0].end_time))),
+          h("ul", { class: "dishes" }, dishes.map(dishRow)))));
+  });
+}
+
+function dishRow(dish) {
+  return h("li", { class: "dish" },
+    starButton(dish.dish),
+    h("div", {},
+      h("div", {}, h("span", { class: "dish-name" }, dish.dish), dietBadges(dish.diets), " ", h("span", { class: "station" }, dish.station)),
+      state.showNutrition && h("div", { class: "facts" }, factsLine(dish)),
+      state.showNutrition && h("div", { class: "facts" }, allergenLine(dish))));
+}
+
+function renderDays() {
+  const chips = $("#days");
+  chips.hidden = searching();
+  const days = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const iso = isoDate(addDays(new Date(), offset));
+    days.push(h("button", {
+      type: "button",
+      "aria-pressed": String(iso === state.day),
+      onclick: () => { state.day = iso; loadMenu(); },
+    }, dayLabel(iso)));
+  }
+  setContent(chips, days);
+}
+
+// While searching: offer to save the search as a fave, for this hall or every hall.
+function renderSaveBar() {
+  const bar = $("#save-bar");
+  bar.hidden = !searching();
+  if (bar.hidden) return;
+  if (isFavorite(state.search)) {
+    setContent(bar, h("span", {}, `"${state.search}" is already one of your faves.`));
+    return;
+  }
+  const halls = state.tab === "all" ? [] : [state.tab];
+  setContent(bar,
+    h("span", {}, `Save "${state.search}" as a fave at ${state.tab === "all" ? "every hall" : hallName(state.tab)}?`),
     h("button", {
       type: "button",
-      "aria-pressed": String(meal.name === state.meal),
-      onclick: () => { state.meal = meal.name; renderMeals(meals); renderMenu(); },
-    }, meal.name)));
+      class: "primary",
+      onclick: () => addFavorite({ keyword: state.search, halls, days: [], notes: "" }),
+    }, "Save as a fave"));
 }
 
-function renderMenu() {
-  const grid = $("#menu-grid");
-  if (!state.servings.length) {
-    grid.replaceChildren(h("div", { class: "notice" },
-      "No menus stored for this day. Sodexo posts menus only a few days ahead; for today or tomorrow, click ",
-      h("strong", {}, "Refresh menus"), " to download them."));
-    return;
-  }
-  const onlyHall = $("#hall").value;
-  const halls = state.halls.filter((hall) => !onlyHall || hall.slug === onlyHall);
-  grid.replaceChildren(...halls.map((hall) => hallCard(hall, $("#diet").value)));
+// The allergen filter only knows what Sodexo lists, and Sodexo's lists come and go (PROJECT_SPEC.md 6.3).
+function renderAllergenNotice() {
+  const box = $("#allergen-notice");
+  const count = state.allergens.length;
+  setContent($("#allergen-summary"), "Hide dishes that list…", count ? h("span", { class: "count" }, count) : null);
+  box.hidden = !count;
+  if (!count) return;
+  const incomplete = state.coverage.filter((c) => c.incomplete && (state.tab === "all" || c.hall_slug === state.tab));
+  box.classList.toggle("warn", incomplete.length > 0);
+  setContent(box,
+    h("p", {},
+      h("strong", {}, `Hiding dishes that list ${state.allergens.map((code) => ALLERGEN_NAMES[code].toLowerCase()).join(", ")}. `),
+      "A dish that lists nothing may still contain it, so ask dining staff if you have an allergy."),
+    incomplete.length === 0 ? null : h("ul", {}, incomplete.map((c) =>
+      h("li", {}, `Allergen info looks incomplete for ${c.hall} ${dayLabel(c.date)}: only ${c.dishes_listing_allergens} of ${c.dishes} dishes list any. Don't rely on this filter there.`))));
 }
 
-function hallCard(hall, diet) {
-  const atMeal = state.servings.filter((s) => s.hall_slug === hall.slug && s.meal === state.meal);
-  const shown = diet ? atMeal.filter((s) => s.diets.includes(diet)) : atMeal;
-  let body;
-  if (!atMeal.length) {
-    body = h("p", { class: "empty" }, `No ${state.meal.toLowerCase()} menu posted. The hall may be closed.`);
-  } else if (!shown.length) {
-    body = h("p", { class: "empty" }, `Nothing labeled ${diet} this meal.`);
-  } else {
-    body = [...groupBy(shown, (s) => s.station)].map(([station, dishes]) =>
-      h("details", { class: "station", open: true },
-        h("summary", {}, `${station} (${dishes.length})`),
-        h("ul", { class: "dishes" }, dishes.map(dishItem))));
-  }
-  const hours = atMeal.length ? hoursLabel(atMeal[0].start_time, atMeal[0].end_time) : "";
-  return h("article", { class: "card" },
-    h("header", {}, h("h3", {}, hall.name), h("span", { class: "muted small" }, hours)),
-    body);
-}
+// ---------- Faves tab ----------
 
-// ---------- Find a dish tab ----------
-
-async function search(event) {
-  event.preventDefault();
-  const q = $("#q").value.trim().replace(/\s+/g, " ");
-  const diet = $("#find-diet").value;
-  if (q.length < 2) {
-    toast("Type at least 2 letters.", true);
-    return;
-  }
-  const params = new URLSearchParams({ q, days: "7" });
-  if (diet) params.set("diet", diet);
-  $("#find-results").replaceChildren(h("p", { class: "empty" }, "Searching…"));
+async function loadFaves() {
   try {
-    state.search = { q, diet, servings: await api(`/menus?${params}`) };
-  } catch (error) {
-    toast(error.message, true);
-    $("#find-results").replaceChildren();
-    return;
-  }
-  $("#save-keyword").textContent = q;
-  $("#save-form").hidden = false;
-  renderResults();
-}
-
-function renderResults() {
-  const { q, diet, servings } = state.search;
-  const heading = $("#results-heading");
-  heading.hidden = false;
-  if (!servings.length) {
-    heading.textContent = "Nothing this week";
-    $("#find-results").replaceChildren(h("div", { class: "notice" },
-      `Nothing matching "${q}"${diet ? ` labeled ${diet}` : ""} in the next 7 days. `,
-      "Menus are posted only a few days ahead, so save it as a favorite and check back."));
-    return;
-  }
-  const dishes = groupBy(servings, (s) => s.dish);
-  heading.textContent = `${dishes.size} ${dishes.size === 1 ? "dish" : "dishes"} matching "${q}", ` +
-    `served ${servings.length} ${servings.length === 1 ? "time" : "times"} in the next 7 days`;
-  $("#find-results").replaceChildren(h("div", { class: "grid" }, [...dishes].map(([name, list]) =>
-    h("article", { class: "card" },
-      h("div", { class: "dish-line" },
-        h("span", { class: "dish-name" }, name, dietBadges(list[0].diets)),
-        starButton(name)),
-      h("div", { class: "facts" }, factsLine(list[0])),
-      h("ul", { class: "when" }, list.map((s) =>
-        h("li", {}, `${dayLabel(s.date)} · ${s.meal} ${hoursLabel(s.start_time, s.end_time)} · ${s.hall}`)))))));
-}
-
-async function saveSearch(event) {
-  event.preventDefault();
-  const saved = await addFavorite({
-    keyword: state.search.q,
-    halls: checkedHalls($("#save-halls")),
-    notes: $("#save-notes").value.trim(),
-  });
-  if (saved) $("#save-notes").value = "";
-}
-
-// ---------- My favorites tab ----------
-
-async function loadFavorites() {
-  try {
-    const [favorites, entries] = await Promise.all([api("/favorites"), api("/favorites/calendar?days=7")]);
+    const [favorites, active, archived] = await Promise.all([
+      api("/favorites"),
+      api("/favorites/calendar?days=7"),
+      api("/favorites/calendar?days=7&archived=true"),
+    ]);
     state.favorites = favorites;
-    renderFavorites(entries);
-    renderWeek(entries);
+    state.matches = { active, archived };
   } catch (error) {
     toast(error.message, true);
   }
+  renderFaves();
 }
 
-function renderFavorites(entries) {
-  if (!state.favorites.length) {
-    $("#fav-list").replaceChildren(h("div", { class: "notice" },
-      "No favorites yet. Tap ☆ next to a dish on the Menus tab, or search on Find a dish."));
+function renderFaves() {
+  const active = state.favorites.filter((fave) => !fave.archived);
+  const archived = state.favorites.filter((fave) => fave.archived);
+  setContent($("#fave-chips"), active.length
+    ? active.map((fave) => faveChip(fave, state.matches.active))
+    : h("p", { class: "empty" }, "No faves yet. Search for a dish and save it, or tap ☆ next to any dish."));
+  setContent($("#fave-table"), active.length ? matchTable(state.matches.active,
+    "None of your faves are on this week's menus. Sodexo posts menus only a few days ahead, so check back.") : null);
+  setContent($("#archived-chips"), archived.length
+    ? archived.map((fave) => faveChip(fave, state.matches.archived))
+    : h("p", { class: "empty" }, "Nothing archived. Open a fave to move it here."));
+  setContent($("#archived-table"), archived.length ? matchTable(state.matches.archived,
+    "None of your archived faves are on this week's menus.") : null);
+  renderEditor();
+}
+
+function faveScope(fave) {
+  const parts = [hallNames(fave.halls)];
+  if (fave.days.length) parts.push(`${fave.days.map((day) => WEEKDAY_NAMES[day]).join(", ")} only`);
+  return parts.join(" · ");
+}
+
+function faveChip(fave, matches) {
+  const count = matches.filter((match) => match.favorite_id === fave.id).length;
+  return h("button", {
+    type: "button",
+    class: "fave-chip",
+    "aria-pressed": String(state.openFave === fave.id),
+    onclick: () => openFave(fave.id),
+  }, h("strong", {}, fave.keyword),
+     h("span", { class: "muted small" }, ` · ${faveScope(fave)} · ${count ? `${count} this week` : "none this week"}`));
+}
+
+// The author's sketch: "Hall, time | Food", and clicking a row opens that fave.
+function matchTable(matches, emptyText) {
+  if (!matches.length) return h("p", { class: "empty" }, emptyText);
+  return h("table", { class: "matches" },
+    h("thead", {}, h("tr", {}, h("th", { scope: "col" }, "Hall, time"), h("th", { scope: "col" }, "Food"))),
+    h("tbody", {}, matches.map((match) => h("tr", {
+      tabindex: "0",
+      class: match.favorite_id === state.openFave ? "selected" : null,
+      title: `Open the fave "${match.keyword}"`,
+      onclick: () => openFave(match.favorite_id),
+      onkeydown: (event) => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openFave(match.favorite_id); }
+      },
+    },
+      h("td", {},
+        h("div", {}, `${dayLabel(match.date)} · ${match.hall}`),
+        h("div", { class: "muted small" }, `${match.meal} ${hoursLabel(match.start_time, match.end_time)}`)),
+      h("td", {},
+        h("div", {}, match.dish),
+        h("div", { class: "muted small" }, `fave: ${match.keyword}`))))));
+}
+
+function openFave(id) {
+  state.openFave = state.openFave === id ? null : id;
+  renderFaves();
+  if (state.openFave) $("#fave-editor").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// Edit (N3), archive or restore, or remove (N4) one fave.
+function renderEditor() {
+  const fave = state.favorites.find((f) => f.id === state.openFave);
+  if (!fave) {
+    setContent($("#fave-editor"));
     return;
   }
-  $("#fav-list").replaceChildren(...state.favorites.map((fav) =>
-    favoriteRow(fav, entries.filter((entry) => entry.favorite_id === fav.id).length)));
-}
-
-function favoriteRow(fav, count) {
-  const row = h("article", { class: "card fav" },
-    h("div", {},
-      h("strong", {}, fav.keyword), " ",
-      h("span", { class: "muted small" },
-        `${hallNames(fav.halls)} · ${count ? `served ${count} ${count === 1 ? "time" : "times"} this week` : "not on this week's menus"}`),
-      fav.notes ? h("div", { class: "small" }, fav.notes) : null),
-    h("div", { class: "actions" },
-      h("button", { type: "button", onclick: () => row.replaceWith(editForm(fav, count)) }, "Edit"),
-      h("button", { type: "button", class: "danger", onclick: () => removeFavorite(fav) }, "Delete")));
-  return row;
-}
-
-function editForm(fav, count) {
-  const keyword = h("input", { type: "text", value: fav.keyword, minlength: "2", maxlength: "100", required: true });
-  const notes = h("input", { type: "text", value: fav.notes, maxlength: "500" });
-  const halls = h("div", { class: "checks" }, hallCheckboxes(fav.halls));
-  const form = h("form", {
-    class: "card stack",
-    onsubmit: async (event) => {
-      event.preventDefault();
-      try {
-        await api(`/favorites/${fav.id}`, {
-          method: "PUT",
-          body: JSON.stringify({ keyword: keyword.value, halls: checkedHalls(halls), notes: notes.value.trim() }),
-        });
-        toast("Favorite updated.");
-        await loadFavorites();
-      } catch (error) {
-        toast(error.message, true);
-      }
-    },
+  const keyword = h("input", { type: "text", value: fave.keyword, minlength: "2", maxlength: "100", required: true });
+  const notes = h("input", { type: "text", value: fave.notes, maxlength: "500" });
+  const halls = h("div", { class: "checks" }, checkboxes(state.halls.map((hall) => [hall.slug, hall.name]), fave.halls));
+  const days = h("div", { class: "checks" }, checkboxes(WEEKDAYS, fave.days));
+  const current = (archived) => ({
+    keyword: keyword.value, halls: checkedValues(halls), days: checkedValues(days), notes: notes.value.trim(), archived,
+  });
+  const save = async (changes, message) => {
+    try {
+      await api(`/favorites/${fave.id}`, { method: "PUT", body: JSON.stringify(changes) });
+      await loadFaves();
+      toast(message);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  };
+  setContent($("#fave-editor"), h("form", {
+    class: "card stack editor",
+    onsubmit: (event) => { event.preventDefault(); save(current(fave.archived), "Fave saved."); },
   },
-    h("label", { class: "field" }, "Keyword", keyword),
+    h("div", { class: "editor-head" }, h("strong", {}, `Fave: ${fave.keyword}`), fave.archived && h("span", { class: "badge archived" }, "archived")),
+    h("label", { class: "field" }, "Keyword: matches every dish whose name contains these words", keyword),
     h("div", {}, h("div", { class: "muted small" }, "Halls (leave all unchecked for every hall)"), halls),
+    h("div", {}, h("div", { class: "muted small" }, "Only on these days (leave all unchecked for every day)"), days),
     h("label", { class: "field" }, "Notes", notes),
     h("div", { class: "actions" },
       h("button", { type: "submit", class: "primary" }, "Save"),
-      h("button", { type: "button", onclick: () => form.replaceWith(favoriteRow(fav, count)) }, "Cancel")));
-  return form;
+      h("button", {
+        type: "button",
+        onclick: () => save(current(!fave.archived), fave.archived ? `Restored "${fave.keyword}".` : `Moved "${fave.keyword}" to archived faves.`),
+      }, fave.archived ? "Restore" : "Move to archived"),
+      h("button", { type: "button", class: "danger", onclick: () => removeFave(fave) }, "Remove"),
+      h("button", { type: "button", onclick: () => openFave(fave.id) }, "Close"))));
 }
 
-async function removeFavorite(fav) {
-  if (!confirm(`Delete the favorite "${fav.keyword}"?`)) return;
+async function removeFave(fave) {
+  if (!confirm(`Remove the fave "${fave.keyword}"? This can't be undone; archiving keeps it instead.`)) return;
   try {
-    await api(`/favorites/${fav.id}`, { method: "DELETE" });
-    toast(`Deleted "${fav.keyword}".`);
-    await loadFavorites();
+    await api(`/favorites/${fave.id}`, { method: "DELETE" });
+    state.openFave = null;
+    await loadFaves();
+    toast(`Removed "${fave.keyword}".`);
   } catch (error) {
     toast(error.message, true);
   }
 }
 
-// This week's matches, grouped by day, then by meal and hall.
-function renderWeek(entries) {
-  $("#week-heading").hidden = !state.favorites.length;
-  if (!state.favorites.length) {
-    $("#week").replaceChildren();
-    return;
-  }
-  if (!entries.length) {
-    $("#week").replaceChildren(h("div", { class: "notice" },
-      "None of your favorites are on the menus stored for the next 7 days. Sodexo posts menus only a few days ahead, so check back."));
-    return;
-  }
-  $("#week").replaceChildren(...[...groupBy(entries, (entry) => entry.date)].map(([date, dayEntries]) =>
-    h("section", { class: "card" },
-      h("h3", {}, longDayLabel(date)),
-      [...groupBy(dayEntries, (entry) => `${entry.meal}|${entry.hall}`).values()].map((slot) => {
-        const first = slot[0];
-        const dishes = [...new Set(slot.map((entry) => entry.dish))];
-        const keywords = [...new Set(slot.map((entry) => `"${entry.keyword}"`))];
-        return h("div", { class: "slot" },
-          h("div", {},
-            h("strong", {}, `${first.meal} · ${first.hall}`), " ",
-            h("span", { class: "muted small" }, hoursLabel(first.start_time, first.end_time))),
-          h("div", {}, dishes.join(", ")),
-          h("div", { class: "muted small" }, `matches ${keywords.join(", ")}`));
-      }))));
-}
-
 // ---------- page setup ----------
-
-function showTab(name) {
-  for (const button of document.querySelectorAll(".tabs button")) {
-    button.setAttribute("aria-selected", String(button.dataset.tab === name));
-  }
-  for (const section of document.querySelectorAll("main > section")) {
-    section.hidden = section.id !== `tab-${name}`;
-  }
-  if (name === "menus") renderMenu();
-  if (name === "find") $("#q").focus();
-  if (name === "favorites") loadFavorites();
-}
 
 async function refreshMenus() {
   const button = $("#refresh");
@@ -647,8 +719,8 @@ async function refreshMenus() {
     const failed = summary.failed.length;
     toast(`Loaded ${summary.servings} servings for the next ${summary.days} days.` +
       (failed ? ` ${failed} downloads failed; kept the old menus for those.` : ""), failed > 0);
-    await selectDay(state.day);
-    if (!$("#tab-favorites").hidden) await loadFavorites();
+    if (state.tab === "faves") await loadFaves();
+    else await loadMenu();
   } catch (error) {
     toast(`Couldn't refresh: ${error.message}`, true);
   } finally {
@@ -657,33 +729,64 @@ async function refreshMenus() {
   }
 }
 
-async function init() {
-  const savedDiet = recall("diet") || "";
-  for (const select of [$("#diet"), $("#find-diet")]) {
-    select.replaceChildren(...DIETS.map(([value, label]) => h("option", { value }, label)));
-    select.value = DIETS.some(([value]) => value === savedDiet) ? savedDiet : "";
-    select.addEventListener("change", () => remember("diet", select.value));
-  }
-  $("#diet").addEventListener("change", renderMenu);
-  $("#hall").addEventListener("change", renderMenu);
-  for (const button of document.querySelectorAll(".tabs button")) {
-    button.addEventListener("click", () => showTab(button.dataset.tab));
-  }
-  $("#refresh").addEventListener("click", refreshMenus);
-  $("#find-form").addEventListener("submit", search);
-  $("#save-form").addEventListener("submit", saveSearch);
+function setUpFilters() {
+  state.meal = recall("meal", "");
+  state.diet = recall("diet", "");
+  state.allergens = recall("allergens", []).filter((code) => code in ALLERGEN_NAMES);
+  state.showNutrition = recall("showNutrition", false);
 
+  const meal = $("#meal");
+  setContent(meal, h("option", { value: "" }, "Any meal"), MEALS.map((name) => h("option", { value: name }, name)));
+  meal.value = MEALS.includes(state.meal) ? state.meal : "";
+  meal.addEventListener("change", () => { state.meal = meal.value; remember("meal", state.meal); loadMenu(); });
+
+  const diet = $("#diet");
+  setContent(diet, h("option", { value: "" }, "Any diet"), DIETS.map(([value, label]) => h("option", { value }, label)));
+  diet.value = DIETS.some(([value]) => value === state.diet) ? state.diet : "";
+  diet.addEventListener("change", () => { state.diet = diet.value; remember("diet", state.diet); loadMenu(); });
+
+  const allergens = $("#allergen-checks");
+  setContent(allergens, checkboxes(ALLERGENS, state.allergens));
+  allergens.addEventListener("change", () => {
+    state.allergens = checkedValues(allergens);
+    remember("allergens", state.allergens);
+    loadMenu();
+  });
+
+  const nutrition = $("#nutrition");
+  nutrition.checked = state.showNutrition;
+  nutrition.addEventListener("change", () => {
+    state.showNutrition = nutrition.checked;
+    remember("showNutrition", state.showNutrition);
+    renderMenu();
+  });
+
+  let typing;
+  $("#q").addEventListener("input", (event) => {
+    clearTimeout(typing);
+    typing = setTimeout(() => {
+      state.search = event.target.value.trim().replace(/\s+/g, " ");
+      loadMenu();
+    }, 250);
+  });
+}
+
+async function init() {
+  state.day = todayIso();
+  setUpFilters();
+  $("#refresh").addEventListener("click", refreshMenus);
+  // Close the allergen list when clicking elsewhere
+  document.addEventListener("click", (event) => {
+    const menu = $("#allergen-menu");
+    if (menu.open && !menu.contains(event.target)) menu.open = false;
+  });
   try {
     [state.halls, state.favorites] = await Promise.all([api("/locations"), api("/favorites")]);
   } catch (error) {
     toast(`Can't reach the app: ${error.message}`, true);
     return;
   }
-  $("#hall").replaceChildren(
-    h("option", { value: "" }, "All halls"),
-    ...state.halls.map((hall) => h("option", { value: hall.slug }, hall.name)));
-  $("#save-halls").replaceChildren(...hallCheckboxes());
-  await selectDay(todayIso());
+  showTab("all");
 }
 
 init();

@@ -50,7 +50,24 @@
             "carbohydrates": "28g",
             "protein": "11g",
             "fat": "10",
-            "portion": "SLC=1/8"
+            "portion": "SLC=1/8",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "MILK",
+                "name": "Milk",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           },
           {
             "course": "Slices",
@@ -64,7 +81,24 @@
             "carbohydrates": "28g",
             "protein": "10g",
             "fat": "7",
-            "portion": "SLC=1/8"
+            "portion": "SLC=1/8",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "MILK",
+                "name": "Milk",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           }
         ]
       },
@@ -103,7 +137,24 @@
             "carbohydrates": "36g",
             "protein": "4g",
             "fat": "9",
-            "portion": "ENTREE"
+            "portion": "ENTREE",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "SO",
+                "name": "Soy",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           }
         ]
       }
@@ -127,7 +178,24 @@
             "carbohydrates": "28g",
             "protein": "10g",
             "fat": "7",
-            "portion": "SLC=1/8"
+            "portion": "SLC=1/8",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "MILK",
+                "name": "Milk",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           }
         ]
       },
@@ -146,7 +214,24 @@
             "carbohydrates": "36g",
             "protein": "4g",
             "fat": "9",
-            "portion": "ENTREE"
+            "portion": "ENTREE",
+            "allergens": [
+              {
+                "allergen": "GLUTEN",
+                "name": "Gluten",
+                "contains": "true"
+              },
+              {
+                "allergen": "SO",
+                "name": "Soy",
+                "contains": "true"
+              },
+              {
+                "allergen": "WHEAT",
+                "name": "Wheat",
+                "contains": "true"
+              }
+            ]
           }
         ]
       }

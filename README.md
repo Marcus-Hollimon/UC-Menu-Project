@@ -4,10 +4,11 @@ See what every University of Cincinnati dining hall (Center Court, MarketPointe,
 
 It runs on your own computer. Menus come from the same Sodexo API the UC Dining website uses. The app names itself in each request and only downloads menus when you ask. UC Dining's terms allow personal, non-commercial use, so keep it that way; `PROJECT_SPEC.md` section 10 has the details.
 
-The web page has three tabs:
-- **Menus:** one meal at every hall side by side for any of the next 7 days, with diet labels (vegan, vegetarian, plant-based, mindful) and calories, carbs, protein, fat and portion size. ☆ saves a dish as a favorite.
-- **Find a dish:** search the next 7 days for a keyword like "pancake" or "tofu", see where and when each match is served, and save the keyword as a favorite for chosen halls.
-- **My favorites:** edit or delete favorites and see this week's matches, day by day.
+The web page has a tab for each hall, an **All halls** tab, and a **Faves** tab:
+- **Hall tabs and All halls:** search first. Typing "pancake" or "tofu" searches the next 7 days, and you can save the search as a fave. With no search, pick a day to see its menu, grouped by meal with times. You can filter by meal, by diet (vegetarian, vegan, plant-based, mindful), and with "Hide dishes that list…" for allergens. **Show nutrition** adds calories, carbs, protein, fat, portion size and listed allergens. ☆ saves a dish as a fave.
+- **Faves:** a table of when your faves are served this week (hall and time, food). Click a row or a fave to edit it, limit it to certain days ("only Saturdays"), move it to archived faves, or remove it.
+
+The layout comes from the author's hand-drawn sketches (`PROJECT_SPEC.md` 6.5).
 
 ## Run it
 
@@ -59,7 +60,7 @@ If Sodexo ever changes the key, downloads start failing; repeat these steps to g
 
 ### Updating
 
-If you pull a version that changes the database tables, rebuild them with `.venv\Scripts\python.exe -m app.ingest --reset` (macOS/Linux: `.venv/bin/python -m app.ingest --reset`). This also deletes your favorites.
+When you pull a newer version, the app adds any new database columns by itself at startup and keeps your favorites; click **Refresh menus** afterwards to fill in new menu details. If it ever can't upgrade, it stops and says so. Then rebuild with `.venv\Scripts\python.exe -m app.ingest --reset` (macOS/Linux: `.venv/bin/python -m app.ingest --reset`), which also deletes your favorites.
 
 ## API
 
@@ -69,17 +70,18 @@ The page is built on a JSON API. Try every endpoint at http://127.0.0.1:8000/doc
 |---|---|---|
 | GET | `/locations` | List the dining halls |
 | GET | `/menu-items?q=pizza&hall=marketpointe&diet=vegetarian` | Search dishes by name |
-| GET | `/menus?day=2026-09-24&hall=center-court&meal=Lunch&diet=vegan` | One day's menu, with nutrition |
+| GET | `/menus?day=2026-10-08&hall=center-court&meal=Lunch&diet=vegan&exclude_allergen=GLUTEN` | One day's menu, with nutrition and listed allergens |
 | GET | `/menus?q=pancake&days=7` | Where and when dishes matching a keyword are served |
+| GET | `/menus/allergen-coverage?day=2026-10-08` | How many dishes per hall list any allergen, and whether that looks incomplete |
 | POST | `/menus/refresh?days=7` | Download fresh menus from Sodexo |
-| POST | `/favorites` | Add a favorite: `{"keyword": "pizza", "halls": [], "notes": ""}` |
-| GET | `/favorites` | List favorites |
+| POST | `/favorites` | Add a favorite: `{"keyword": "pancake", "halls": [], "days": ["saturday"], "notes": ""}` |
+| GET | `/favorites` | List favorites, active and archived |
 | GET | `/favorites/{id}` | Get one favorite |
-| PUT | `/favorites/{id}` | Replace a favorite's keyword, halls and notes |
+| PUT | `/favorites/{id}` | Replace a favorite's keyword, halls, days, notes and `archived` flag |
 | DELETE | `/favorites/{id}` | Remove a favorite |
-| GET | `/favorites/calendar?days=7` | Where and when your favorites are served |
+| GET | `/favorites/calendar?days=7` | Where and when your favorites are served (`&archived=true` for archived ones) |
 
-A keyword matches a dish when every word in it appears in the dish name, ignoring case. `halls` limits matches to those halls; an empty list means all halls. `diet` is one of `vegetarian`, `vegan`, `plant-based`, `mindful`.
+A keyword matches a dish when every word in it appears in the dish name, ignoring case. `halls` limits matches to those halls, and `days` to those weekdays; empty lists mean all. `diet` is one of `vegetarian`, `vegan`, `plant-based`, `mindful`. `exclude_allergen` (repeatable) is one of `GLUTEN`, `WHEAT`, `MILK`, `EGGS`, `SO` (soy), `SESAME_SEEDS`, `FISH`, `TREE_NUTS`, `PEANUTS`, and hides dishes that **list** it.
 
 ## Tests
 
@@ -109,7 +111,7 @@ tests/             pytest suite and fixture menus
 ## Known limitations
 
 - Menus show what's planned. Dishes can run out or change.
-- Diet labels and nutrition come straight from Sodexo, and labels are sometimes missing. Don't use this app for allergies.
+- Diet labels, allergens and nutrition come straight from Sodexo, and are sometimes missing. "Hide dishes that list gluten" only hides dishes that *list* gluten; a dish listing nothing may still contain it. The page warns when a hall's allergen lists look incomplete, but don't rely on this app for an allergy; ask dining staff.
 - Meal times are each hall's regular hours (copied from the UC Dining site on 2026-09-22). Breaks and holidays aren't handled.
 - Matching is substring-based, so "ham" also matches "Graham Cracker".
 - Only the three residential halls publish menus. Retail locations (Stadium View, Chick-fil-A, and others) don't.

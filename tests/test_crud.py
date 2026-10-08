@@ -1,6 +1,7 @@
 """Create, read, update and delete favorites, plus the favorites calendar.
 
-Requirements: N1 (create), N2 (upcoming occurrences), N3 (edit), N4 (delete), D2 (keyword matching).
+Requirements: N1 (create, with weekdays), N2 (upcoming occurrences, archived separately), N3 (edit, archive),
+N4 (delete), D2 (keyword matching).
 """
 import pytest
 
@@ -27,8 +28,16 @@ def test_create_favorite(client):
     assert isinstance(body["id"], int)
 
 
-def test_create_defaults_to_all_halls(client):
-    assert add_favorite(client)["halls"] == []
+def test_create_defaults_to_all_halls_every_day_not_archived(client):
+    favorite = add_favorite(client)
+
+    assert (favorite["halls"], favorite["days"], favorite["archived"]) == ([], [], False)
+
+
+def test_create_keeps_weekdays_in_week_order_without_repeats(client):
+    favorite = add_favorite(client, "pancake", days=["saturday", "monday", "saturday"])
+
+    assert favorite["days"] == ["monday", "saturday"]
 
 
 @pytest.mark.parametrize("body", [
@@ -36,6 +45,7 @@ def test_create_defaults_to_all_halls(client):
     {"keyword": "   x   "},
     {"halls": ["center-court"]},
     {"keyword": "pizza", "halls": ["siddall-hall"]},
+    {"keyword": "pizza", "days": ["funday"]},
 ])
 def test_create_rejects_invalid_input(client, body):
     assert client.post("/favorites", json=body).status_code == 422
@@ -172,3 +182,26 @@ def test_calendar_ignores_days_outside_the_window(client, menus):
 
     response = client.get("/favorites/calendar", params={"start": "2026-09-23", "days": 7})
     assert response.json() == []
+
+
+def test_calendar_only_uses_chosen_weekdays(client, menus):
+    # The fixture menus are for Tuesday 2026-09-22.
+    saturdays_only = add_favorite(client, "salmon", days=["saturday"])
+    assert get_calendar(client) == []
+
+    client.put(f"/favorites/{saturdays_only['id']}", json={"keyword": "salmon", "days": ["tuesday", "saturday"]})
+    assert [e["date"] for e in get_calendar(client)] == ["2026-09-22"]
+
+
+def test_archived_favorites_are_kept_but_listed_separately(client, menus):
+    salmon = add_favorite(client, "salmon")
+
+    archived = client.put(f"/favorites/{salmon['id']}", json={"keyword": "salmon", "archived": True}).json()
+    assert archived["archived"] is True
+    assert get_calendar(client) == []
+    archived_matches = client.get("/favorites/calendar", params={"start": "2026-09-22", "archived": True}).json()
+    assert [e["dish"] for e in archived_matches] == ["Salmon, Barley and Lentil Salad"]
+
+    client.put(f"/favorites/{salmon['id']}", json={"keyword": "salmon", "archived": False})
+    assert len(get_calendar(client)) == 1
+    assert [f["keyword"] for f in client.get("/favorites").json()] == ["salmon"]
