@@ -130,7 +130,7 @@ Two students were asked five open questions (what they ate yesterday, what they 
 - refresh menus from Sodexo
 
 **P4.** The code is in a public GitHub repository, and the README lets someone clone it, install it, load menus, and open the page.
-- Waiting on the instructor to confirm this satisfies "public deployment" (open decision 1). If not, see 6.6.
+- The instructor confirmed that a public GitHub repo satisfies "public deployment" (decision 1).
 
 **P5.** An automated pytest suite covers every N and D requirement and runs without network access.
 
@@ -154,7 +154,7 @@ Two students were asked five open questions (what they ate yesterday, what they 
 | P1 | Done | `models.py`, `database.py` | |
 | P2 | Done | `/docs` | |
 | P3 | Done: redesigned from the author's sketches 2026-10-08; every tab and the Faves edit/archive/restore/remove flow clicked through in Edge (light, dark, phone width) against a copy of the real database | `app/static/index.html` | `test_web_page_is_served_at_root`; manual check |
-| P4 | In progress: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project (2026-09-24); fresh-clone check passed on Python 3.11 (see Phase 2); instructor confirming it counts | `README.md` | manual check |
+| P4 | Done: public repo https://github.com/Marcus-Hollimon/UC-Menu-Project, accepted by the instructor; fresh-clone checks passed (see Phase 2) | `README.md` | manual check |
 | P5 | Ongoing: 80 tests passing | `tests/` | |
 
 ---
@@ -316,7 +316,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 
 | # | Decision | Status |
 |---|---|---|
-| 1 | Does a public GitHub repo satisfy the "public deployment" deliverable? | **Open.** Asking the instructor 2026-09-24. If not, see 6.6. |
+| 1 | Does a public GitHub repo satisfy the "public deployment" deliverable? | **Yes.** The instructor accepts GitHub or Vercel hosting. GitHub only, decided by the author: hosting the app publicly would make it as easy as possible for anyone to pull Sodexo's data through it, against decision 8's careful use of that data (2026-10-14). |
 | 2 | Calendar subscription feed | **Dropped** 2026-09-24 (interviews, 2.1). |
 | 3 | Where the app runs | **Local first** 2026-09-24. Neon + Render on hold (6.6). |
 | 4 | Allergen filter | **Dropped** 2026-09-24 (6% of dishes listed allergens). **Reinstated** 2026-10-08 at the author's request, after coverage reached 50%: filters hide dishes that *list* an allergen, and a per-hall-day check warns when the data looks incomplete (6.3). |
