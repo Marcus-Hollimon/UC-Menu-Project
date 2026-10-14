@@ -282,6 +282,7 @@ Done when: someone following only the README can open the page, see tonight's di
     3. 8 of 21 menu downloads timed out while Sodexo was slow. Downloads are now retried once (D4).
   - Fresh clone, 2026-10-08, after the key moved to `.env` and the history was rewritten (decision 8): copying `.env.example`, adding the key, install, menu download, the page, and all tests worked. One problem found and fixed: the "no API key in the repository" test also scanned Python's cache files, which contain the folder path, so it failed in any folder whose path contains a UUID-shaped name. It now scans only source files.
 - If possible, a short walkthrough of the page with an interview participant, noting confusion.
+  - Done 2026-10-14 with one interviewee: the app was "fine"; the one disappointment was that the other dining locations were missing. They don't publish menus (D5), so the backlog item below is the most the app could offer.
 - Write up results, including failures.
 
 Done when: every requirement in section 5 has a test or a recorded manual check.
@@ -293,7 +294,7 @@ Done when: every requirement in section 5 has a test or a recorded manual check.
 ### Backlog (only if time allows)
 - D2 punctuation and plural matching.
 - Meal-period filter on favorites (e.g., "only at breakfast").
-- Hours-only list of the 17 locations without menus ("what's open now").
+- Hours-only list of the 17 locations without menus ("what's open now"). Asked for by an interviewee on 2026-10-14.
 - Hosting (6.6).
 
 ---
