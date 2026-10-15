@@ -2,7 +2,7 @@
 
 Search what every University of Cincinnati dining hall (Center Court, MarketPointe, On The Green) is serving over the next week, filter by meal, diet and allergens, check nutrition, and save favorite dishes to see which hall serves them, on which day, and at what time.
 
-- **Demo video (about 2½ minutes):** coming soon on YouTube <!-- TODO: replace with the unlisted YouTube link -->
+- **Demo video (about 2½ minutes):** coming soon on YouTube https://www.youtube.com/watch?v=PldsPWrztJQ
 - **How it was built, and how AI was used:** [docs/PROCESS.md](docs/PROCESS.md), the process write-up and AI reflection for CS4005 Project 1
 - **Requirements, design, and every decision with its date:** [PROJECT_SPEC.md](PROJECT_SPEC.md)
 
