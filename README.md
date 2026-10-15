@@ -1,14 +1,65 @@
 # UC Dining Favorites
 
-See what every University of Cincinnati dining hall (Center Court, MarketPointe, On The Green) is serving, filter by diet, check nutrition, and save favorite dishes to see which hall serves them, on which day, and at what time.
+Search what every University of Cincinnati dining hall (Center Court, MarketPointe, On The Green) is serving over the next week, filter by meal, diet and allergens, check nutrition, and save favorite dishes to see which hall serves them, on which day, and at what time.
 
-It runs on your own computer. Menus come from the same Sodexo API the UC Dining website uses. The app names itself in each request and only downloads menus when you ask. UC Dining's terms allow personal, non-commercial use, so keep it that way; `PROJECT_SPEC.md` section 10 has the details.
+- **Demo video (about 2½ minutes):** coming soon on YouTube <!-- TODO: replace with the unlisted YouTube link -->
+- **How it was built, and how AI was used:** [docs/PROCESS.md](docs/PROCESS.md), the process write-up and AI reflection for CS4005 Project 1
+- **Requirements, design, and every decision with its date:** [PROJECT_SPEC.md](PROJECT_SPEC.md)
 
-The web page has a tab for each hall, an **All halls** tab, and a **Faves** tab:
-- **Hall tabs and All halls:** search first. Typing "pancake" or "tofu" searches the next 7 days, and you can save the search as a fave. With no search, pick a day to see its menu, grouped by meal with times. You can filter by meal, by diet (vegetarian, vegan, plant-based, mindful), and with "Hide dishes that list…" for allergens. **Show nutrition** adds calories, carbs, protein, fat, portion size and listed allergens. ☆ saves a dish as a fave.
-- **Faves:** a table of when your faves are served this week (hall and time, food). Click a row or a fave to edit it, limit it to certain days ("only Saturdays"), move it to archived faves, or remove it.
+![All halls: today's meals at every hall](docs/screenshots/01-all-halls.png)
 
-The layout comes from the author's hand-drawn sketches (`PROJECT_SPEC.md` 6.5).
+It runs on your own computer, and you can download it from this repository (see [Run it](#run-it)).
+
+## What it does
+
+**Search first.** Type a dish, such as "pancake" or "tofu", to see everywhere and every time it's served in the next 7 days. One click saves the search as a fave.
+
+![Searching "pancakes" across the next 7 days](docs/screenshots/02-search.png)
+
+**Browse one hall, or all of them.** Pick a day to see its menu grouped by meal, with each meal's hours. Filter by meal and by diet (vegetarian, vegan, plant-based, mindful). Nutrition (calories, carbs, protein, fat, portion size) stays hidden until you tick **Show nutrition**, so the page isn't cluttered.
+
+![On The Green, vegan dishes only, with nutrition shown](docs/screenshots/03-hall-vegan-nutrition.png)
+
+**Allergen filters, stated honestly.** "Hide dishes that list…" hides dishes that *list* gluten, milk, or another allergen. Sodexo has no "gluten-free" label, so the page never claims one. If few dishes at a hall list allergens that day, it warns that the data looks incomplete.
+
+![Hiding dishes that list gluten and milk](docs/screenshots/04-allergen-filter.png)
+
+**Faves.** See when everything you follow is served this week, as a table of hall and time against food. Click a fave or a row to see only that fave's rows, edit it, limit it to certain days ("only Saturdays"), move it to archived faves, or remove it.
+
+| All your faves this week | One fave opened |
+|---|---|
+| ![The Faves tab](docs/screenshots/05-faves.png) | ![The pizza fave opened, showing only its rows](docs/screenshots/06-fave-open.png) |
+
+## How to use it
+
+1. Open the app (see [Run it](#run-it)) and click **Refresh menus** if today's menu is missing.
+2. Choose **All halls** to compare every hall, or a hall's tab to see just that hall.
+3. **Search** for a dish, or pick a day and look through its meals. Narrow the list with **Meal**, **Diet**, and **Hide dishes that list…**, and tick **Show nutrition** when you want the numbers.
+4. Save what you like: ☆ next to a dish saves that dish; **Save as a fave** saves a whole search, like "pancake".
+5. Open **Faves** to see when they're served this week. Click one to edit it, limit it to certain days, archive it, or remove it.
+
+## How it works
+
+```
+Sodexo menu API ──> app/ingest.py ──> uc_menu.db (SQLite) ──> FastAPI JSON API ──> web page
+  (same data the      (downloads 7 days       (dishes, servings,        (app/main.py,         (app/static/
+   UC Dining site      for 3 halls, 4 at       favorites)                app/routers/)         index.html)
+   uses)               a time, retries once)
+```
+
+- **Menus** come from the same Sodexo API the UC Dining website uses: 7 days for 3 halls is 21 requests per refresh. Each dish is stored once, with its nutrition, diet labels, and listed allergens. Each serving records the hall, date, meal, and station.
+- **Meal times** come from each hall's regular hours, because the menu API has none.
+- **Matching:** a keyword matches a dish when every word in it appears in the dish name, so "pizza" finds every pizza. A fave is a keyword, optionally limited to certain halls and weekdays.
+- **Allergen check:** for each hall and day, the app counts how many dishes list any allergen, and warns when fewer than 1 in 4 do.
+- **Safety:** the app has no accounts, only answers requests addressed to your own computer, and keeps the menu API key in your own `.env` file.
+- **Testing:** 80 automated tests run without internet, on trimmed copies of real menus. Every change to the page was also checked by driving the real app in a browser.
+- **Built with AI:** Claude Code wrote the code from the author's requirements, interviews, and design decisions. The write-up is in [docs/PROCESS.md](docs/PROCESS.md).
+
+The page is built on a JSON API, documented interactively at http://127.0.0.1:8000/docs while the app runs (see [API](#api)).
+
+![The API documentation page](docs/screenshots/08-api-docs.png)
+
+Menus come from Sodexo's API, which UC Dining's terms allow for personal, non-commercial use. The app names itself in each request and only downloads menus when you ask; `PROJECT_SPEC.md` section 10 has the details.
 
 ## Run it
 
@@ -94,7 +145,11 @@ A keyword matches a dish when every word in it appears in the dish name, ignorin
 ## Project layout
 
 ```
-PROJECT_SPEC.md  requirements, design and plan (the source of truth)
+PROJECT_SPEC.md  requirements, design, decisions and status
+docs/
+  PROCESS.md       how it was built and how AI was used (CS4005 write-up)
+  screenshots/     the screenshots in this README
+  sketches/        the author's hand-drawn designs
 app/
   main.py          FastAPI app; serves the page at /
   static/index.html  the web page (plain HTML, CSS and JavaScript)
@@ -114,9 +169,13 @@ tests/             pytest suite and fixture menus
 - Diet labels, allergens and nutrition come straight from Sodexo, and are sometimes missing. "Hide dishes that list gluten" only hides dishes that *list* gluten; a dish listing nothing may still contain it. The page warns when a hall's allergen lists look incomplete, but don't rely on this app for an allergy; ask dining staff.
 - Meal times are each hall's regular hours (copied from the UC Dining site on 2026-09-22). Breaks and holidays aren't handled.
 - Matching is substring-based, so "ham" also matches "Graham Cracker".
-- Only the three residential halls publish menus. Retail locations (Stadium View, Chick-fil-A, and others) don't.
+- Only the three residential halls publish menus. Retail locations (Stadium View, Chick-fil-A, and others) don't, so they can't be included, even though students asked for them.
 - Each copy of the app has its own favorites; they don't sync between computers.
 
 ## Optional: Postgres
 
-The app can use Postgres instead of SQLite. In `.env`, remove the `# ` in front of `DATABASE_URL` and set it to a Postgres connection string. `.env` is git-ignored so the password never gets committed. This was set up for hosting, which is on hold (see `PROJECT_SPEC.md` section 6.6).
+The app can use Postgres instead of SQLite. In `.env`, remove the `# ` in front of `DATABASE_URL` and set it to a Postgres connection string. `.env` is git-ignored so the password never gets committed. This was set up for public hosting, which the project decided against (`PROJECT_SPEC.md` decision 1 and section 6.6).
+
+## Credits
+
+Built by [Marcus-Hollimon](https://github.com/Marcus-Hollimon) for CS4005, Project 1 (human-guided software development), with Claude Code writing the code. Not affiliated with the University of Cincinnati, UC Dining, or Sodexo.
